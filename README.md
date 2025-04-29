@@ -1,2 +1,2 @@
-# adversa_agentic_ai
-Advers(arial) Agentic AI is a project for developing the AI infrastructure for Adversail AI Agents (Red/Blue) for continously attacking and countering the attacks in any Domain to meet the compliance requirements of the domain.
+# Adversa_agentic_ai
+Advers(arial) Agentic AI is a project for developing the AI infrastructure for Adversail AI Agents (Red/Blue). The AI Agentes continously attack and counter the attacks in any Simulated or Real Domain to uncover security violations and compliance non-conformance, and 1/bring awareness of the gaps and 2/providate mitigations that can be deployed  in simillar domains to establish the compliance requirements of the domain.
