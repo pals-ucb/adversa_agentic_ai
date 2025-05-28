@@ -5,29 +5,26 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "adversarial_agentic_ai"
 version = "0.1.0"
-description = "An AI based Adversarial Red/Blue teaming system to protect a domain and meets its compliances."
+description = "An AI-based Adversarial Red/Blue teaming system to protect a domain and ensure compliance."
 readme = "README.md"
 license = {text = "Apache-2.0"}
 authors = [{ name = "Pals Chinnakannan", email = "palsc@berkeley.edu" }]
-dependencies = []
+dependencies = [
+    "boto3",
+    "langchain",
+    "pydantic",
+    "rich",
+    "openai",         
+    "typing-extensions"
+]
 
 [project.optional-dependencies]
-dev = [
-    "black",
-    "pre-commit"
-]
-test = [
-    "pytest",
-    "coverage"
-]
-docs = [
-    "sphinx",
-    "mkdocs"
-]
+dev = ["black", "pre-commit"]
+test = ["pytest", "coverage"]
+docs = ["sphinx", "mkdocs"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-

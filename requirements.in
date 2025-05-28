@@ -1,3 +1,2 @@
--e .[dev,test,docs]
--e ./modules/agentic_cbsim[dev]
-
+boto3
+langchain

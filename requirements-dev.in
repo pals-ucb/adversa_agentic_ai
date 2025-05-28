@@ -1,0 +1,6 @@
+black
+pre-commit
+pytest
+coverage
+sphinx
+mkdocs

@@ -1,4 +1,4 @@
 [submodule "modules/agentic_cbsim"]
 	path = modules/agentic_cbsim
-	url = git@github.com:pals-ucb/CyberBattleSim.git
+	url = https://github.com/pals-ucb/CyberBattleSim.git
 	branch = a3-dev

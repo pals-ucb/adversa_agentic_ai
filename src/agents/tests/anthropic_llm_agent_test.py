@@ -1,5 +1,6 @@
 # llm_agent.py
 import boto3
+import json
 
 class AnthropicLLMAgent:
     def __init__(self, model_id="anthropic.claude-3-sonnet-20240229-v1:0", region="us-east-1"):
@@ -21,3 +22,8 @@ class AnthropicLLMAgent:
         )
         result = json.loads(response["body"].read())
         return result["content"][0]["text"]
+
+if __name__ == "__main__":
+    agent = AnthropicLLMAgent()
+    response = agent.prompt_llm("What is the capital of Texas, US state?")
+    print(response)
