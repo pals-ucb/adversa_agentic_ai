@@ -1,0 +1,8 @@
+{
+    "python.analysis.extraPaths": [
+        "./src",
+        "./modules/agentic_cbsim"
+    ],
+    "python.envFile": "${workspaceFolder}/.env",
+    "python.defaultInterpreterPath": "/home/pals/miniconda3/envs/cbsim/bin/python"
+}

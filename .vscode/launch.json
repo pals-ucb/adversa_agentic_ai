@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Run Current Python File",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${file}",
+        "console": "integratedTerminal",
+        "args": [],
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/src"
+        },
+        "envFile": "${workspaceFolder}/.env"
+      }
+    ]
+  }
+  
