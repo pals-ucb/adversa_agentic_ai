@@ -15,7 +15,10 @@ dependencies = [
     "pydantic",
     "rich",
     "openai",         
-    "typing-extensions"
+    "typing-extensions",
+    "fastapi>=0.110.0",
+    "pydantic>=2.6",
+    "uvicorn[standard]>=0.29.0"
 ]
 
 [project.optional-dependencies]
