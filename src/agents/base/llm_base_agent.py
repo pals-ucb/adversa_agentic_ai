@@ -5,6 +5,8 @@ from pydantic import BaseModel
 from uuid import uuid4
 from abc import ABC
 from .agent_interface import AgentInterface
+from providers.llm_factory import get_llm_client
+import logging
 
 # Enums for prompt metadata
 class Relevancy(str, Enum):
@@ -29,41 +31,45 @@ class PromptHistoryEntry(BaseModel):
     effectiveness: Optional[Effectiveness] = None
     rewarding: Optional[Rewarding] = None
 
-# LLMBaseAgent implementing AgentInterface
 class LLMBaseAgent(AgentInterface):
-    def __init__(self, model_name: str, model_endpoint: str):
+    def __init__(self, model_name: str):
         self.model_name = model_name
-        self.model_endpoint = model_endpoint
         self.history: List[PromptHistoryEntry] = []
         self.connected = False
+        self.llm_client = get_llm_client()
+        self.logger = logging.getLogger("llm_agent")
 
     def connect(self):
+        self.llm_client.connect()
         self.connected = True
-        print(f"Connected to {self.model_name} at {self.model_endpoint}")
+        self.logger.info(f"LLMBaseAgent connected to LLM provider: {self.model_name}")
 
     def disconnect(self):
+        self.llm_client.disconnect()
         self.connected = False
-        print(f"Disconnected from {self.model_name}")
+        self.logger.info(f"LLMBaseAgent disconnected from LLM provider: {self.model_name}")
 
     def get_history(self) -> List[PromptHistoryEntry]:
         return self.history
 
     def update_history(self, entry: PromptHistoryEntry):
         self.history.append(entry)
+        self.logger.debug(f"Updated prompt history with entry: {entry.id}")
 
     def refine_history_for_prompt(self) -> List[PromptHistoryEntry]:
-        # Stub for now
         return self.history
 
     def build_prompt(self, context: str) -> str:
-        raise NotImplementedError("build_prompt should be overridden by subclasses")
+        # To be implemented by subclass
+        return context
 
     def action(self, context: str) -> str:
         if not self.connected:
             raise RuntimeError("Agent not connected to model")
-
         prompt = self.build_prompt(context)
-        response = f"[MockResponse for: {prompt}]"
+        self.logger.info(f"Sending prompt to LLM: {prompt}")
+        response = self.llm_client.invoke(prompt)
+        self.logger.info("Received response from LLM")
         entry = PromptHistoryEntry(
             id=str(uuid4()),
             prompt=prompt,
@@ -71,4 +77,5 @@ class LLMBaseAgent(AgentInterface):
         )
         self.update_history(entry)
         return response
+
 
