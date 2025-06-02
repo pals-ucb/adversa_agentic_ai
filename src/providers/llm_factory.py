@@ -7,9 +7,10 @@ from providers.aws.bedrock_interface import BedrockLLMClient
 
 # provider client implies that it provides more than LLM client. We can get knowledgebase, Agents, Flows etc.
 def get_llm_client():
-    provider = config_manager.get("llm", "provider", default="bedrock")
+    default_provider  = config_manager.get("providers", "default", "provider", default="aws")
+    default_platform = config_manager.get("providers", "default", "platform", default="aws")
 
-    if provider == "bedrock":
+    if default_provider == "aws" and default_platform == "bedrock":
         return BedrockLLMClient()
     
-    raise ValueError(f"Unsupported LLM provider: {provider}")
+    raise ValueError(f"Unsupported LLM provider: {default_provider} platform: {default_platform}")

@@ -1,0 +1,16 @@
+Janet is a Healthcare Provider IT Admin.
+Janet Janet is responsible for the security of the thousands of ER facility around the nation.
+Janet is concerned about the security and HIPPA compliance of all the ER facilities.
+She comes across the New Adversarial Agentic AI system for validating HIPAA compliance
+Janet seeks out to evaluate the service and gets access for the trial version.
+Janet wants to try this service on one ER facility which provides the baseline for all ER facilities she owns.
+She learns that she has to model the ER facility, configure a set of AI Agents, start a simulation and then wait for the service results.
+Janet models one of her ER facilty by first identifying the important entities, their attributes and capabilities. 
+She uses the new service interface to define a set of nodes that make up the ER facility, and configures their properties
+She then selects two types of LLM Agents
+1/ Red LLM Agent  to monitor and attack the simulated ER model
+2/Blue LLM AGent to monitor  and protect the simulated ER model
+She then configures theLLM Agents
+She then starts a simulation
+Once the simulation completes
+She gets to see the dashboard 
