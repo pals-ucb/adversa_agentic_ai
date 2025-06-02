@@ -32,22 +32,22 @@ class PromptHistoryEntry(BaseModel):
     rewarding: Optional[Rewarding] = None
 
 class LLMBaseAgent(AgentInterface):
-    def __init__(self, model_name: str):
-        self.model_name = model_name
+    def __init__(self, model_id: str):
+        self.model_id = model_id
         self.history: List[PromptHistoryEntry] = []
         self.connected = False
         self.llm_client = get_llm_client()
         self.logger = logging.getLogger("llm_agent")
 
     def connect(self):
-        self.llm_client.connect()
+        self.llm_client.connect(model_id=self.model_id)
         self.connected = True
-        self.logger.info(f"LLMBaseAgent connected to LLM provider: {self.model_name}")
+        self.logger.info(f"LLMBaseAgent connected to LLM provider: {self.model_id}")
 
     def disconnect(self):
         self.llm_client.disconnect()
         self.connected = False
-        self.logger.info(f"LLMBaseAgent disconnected from LLM provider: {self.model_name}")
+        self.logger.info(f"LLMBaseAgent disconnected from LLM provider: {self.model_id}")
 
     def get_history(self) -> List[PromptHistoryEntry]:
         return self.history
@@ -68,8 +68,8 @@ class LLMBaseAgent(AgentInterface):
             raise RuntimeError("Agent not connected to model")
         prompt = self.build_prompt(context)
         self.logger.info(f"Sending prompt to LLM: {prompt}")
-        response = self.llm_client.invoke(prompt)
-        self.logger.info("Received response from LLM")
+        response = self.llm_client.invoke(self.model_id, prompt)
+        self.logger.info(f"Received response from LLM {response}")
         entry = PromptHistoryEntry(
             id=str(uuid4()),
             prompt=prompt,

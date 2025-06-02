@@ -1,14 +1,14 @@
 import logging
 import uvicorn
-from config.config_manager import config_manager
 from utils.config_logger import setup_logger
+from utils.config_logger import set_current_agent
 
-# Load app name from config or default to 'red_agent'
-app_name = config_manager.get("agent", "name", default="red_agent")
-
-# Set up structured logging
+app_name = "red_agent"
+set_current_agent(app_name)
 setup_logger(app_name)
 logger = logging.getLogger(app_name)
+
+from config.config_manager import config_manager
 
 def launch_uvicorn():
     host = config_manager.get("agent", "host", default="0.0.0.0")

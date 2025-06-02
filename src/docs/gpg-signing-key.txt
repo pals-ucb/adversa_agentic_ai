@@ -1,0 +1,26 @@
+1. Generate a new signing key
+gpg --full-generate-key
+## Get the keyid
+gpg --list-secret-keys --keyid-format=long
+## Set the key for git
+git config --global user.signingkey <NEW_KEYID>
+## Generate a key that can be set in github
+gpg --armor --export <NEW_KEYID>
+
+
+
+
+2. Extending the life of a expired key
+# List your secret keys and copy the KEYID
+gpg --list-secret-keys --keyid-format=long
+
+# Edit your key
+gpg --edit-key <KEYID>
+
+# At the gpg prompt:
+gpg> expire
+# Enter: 3m
+# Confirm changes
+
+gpg> save
+gpg --armor --export <KEYID>

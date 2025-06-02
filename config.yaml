@@ -1,0 +1,55 @@
+# config.yaml (refined for security, clarity, extensibility)
+
+providers:
+  aws:
+    platforms:
+      bedrock:
+        region: us-east-1
+        temperature: 0.7
+        max_tokens: 500
+      sagemaker:
+        endpoint: https://runtime.sagemaker.us-east-1.amazonaws.com
+        instance_type: ml.m5.large
+        initial_model: my-sagemaker-model
+    credentials:
+      profile: default  # Reference to profile in ~/.aws/credentials
+
+  openai:
+    platforms:
+      gpt-api:
+        endpoint: https://api.openai.com/v1/chat/completions
+    credentials:
+      profile: default  # Reference to ~/.llm/credentials.yaml
+
+  huggingface:
+    platforms:
+      inference-endpoint:
+        endpoint: https://api-inference.huggingface.co/models/bert-base-uncased
+    credentials:
+      profile: default  # Reference to ~/.llm/credentials.yaml
+
+  azure:
+    platforms:
+      openai:
+        endpoint: https://YOUR-RESOURCE.openai.azure.com/
+        deployment: gpt-4
+    credentials:
+      profile: default  # Reference to ~/.llm/credentials.yaml
+
+  default:
+    provider: aws
+    platform: bedrock
+
+logging:
+  level: INFO
+  format: "[%(asctime)s] %(levelname)s: %(message)s"
+
+agents:
+  - name: red_agent
+    model_id: anthropic.claude-instant-v1 
+    port: 8000
+    host: 0.0.0.0
+  - name: red_agent2
+    model_id: anthropic.claude-v4
+    port: 8001
+    host: 0.0.0.0

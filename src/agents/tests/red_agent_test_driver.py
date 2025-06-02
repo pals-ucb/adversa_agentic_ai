@@ -58,7 +58,7 @@ def main():
         observation = {"custom_prompt": args.custom_prompt}
     else:
         prompt_input = build_prompt_input(args.os_version, args.apache_version)
-        observation = prompt_input.dict()
+        observation = prompt_input.model_dump()
 
     # Send request to agent
     try:
