@@ -10,15 +10,16 @@ readme = "README.md"
 license = {text = "Apache-2.0"}
 authors = [{ name = "Pals Chinnakannan", email = "palsc@berkeley.edu" }]
 dependencies = [
-    "boto3",
-    "langchain",
-    "pydantic",
+    "boto3>=1.34",
     "rich",
     "openai",         
     "typing-extensions",
     "fastapi>=0.110.0",
     "pydantic>=2.6",
-    "uvicorn[standard]>=0.29.0"
+    "uvicorn>=0.29", 
+    "langchain-core>=0.1.50",
+    "pydantic>=2.6",
+    "uuid",
 ]
 
 [project.optional-dependencies]

@@ -36,10 +36,6 @@ providers:
     credentials:
       profile: default  # Reference to ~/.llm/credentials.yaml
 
-  default:
-    provider: aws
-    platform: bedrock
-
 logging:
   level: INFO
   format: "[%(asctime)s] %(levelname)s: %(message)s"
@@ -49,7 +45,11 @@ agents:
     model_id: anthropic.claude-instant-v1 
     port: 8000
     host: 0.0.0.0
+    provider: aws
+    platform: bedrock
   - name: red_agent2
     model_id: anthropic.claude-v4
     port: 8001
     host: 0.0.0.0
+    provider: aws
+    platform: bedrock
