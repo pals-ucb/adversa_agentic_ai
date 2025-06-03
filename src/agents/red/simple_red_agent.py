@@ -2,11 +2,22 @@
 import logging
 from fastapi import FastAPI
 from agents.base.llm_base_agent import LLMBaseAgent
+from mcp.mcp_message import MCPMessage
 from utils.config_logger import setup_logger
 from config.config_manager import config_manager
 from utils.config_logger import get_agent_logger
 
 logger = get_agent_logger()
+
+from prompts.templates.red_agent.default import (
+    DEFAULT_ACTION_DESCRIPTION,
+    DEFAULT_EVENT_COUNT,
+    DEFAULT_GOAL,
+    DEFAULT_OBSERVATION,
+    DEFAULT_RED_PROMPT_TEMPLATE,
+    DEFAULT_ROLE,
+    DEFAULT_ROLE_DESCRIPTION
+)
 
 class SimpleRedAgent(LLMBaseAgent):
     def __init__(self, agent_name: str):
@@ -19,6 +30,8 @@ class SimpleRedAgent(LLMBaseAgent):
         model_id = agent_cfg.get("model_id")
         host = agent_cfg.get("host")
         port = agent_cfg.get("port")
+        provider = agent_cfg.get("provider")
+        platform = agent_cfg.get("platform")
 
         if not model_id:
             logger.error(f"Missing 'model_id' for agent: {agent_name}")
@@ -31,7 +44,21 @@ class SimpleRedAgent(LLMBaseAgent):
             logger.error(f"Missing 'port' for agent: {agent_name}")
             raise Exception(f"'port' not configured for agent '{agent_name}'")
         logger.info(f"Red Agent '{agent_name}' configured with model '{model_id}' at {host}:{port}")
-        super().__init__(model_id=model_id)
+
+        default_prompt_template_values = {
+            "action_description": DEFAULT_ACTION_DESCRIPTION,
+            "event_count": DEFAULT_EVENT_COUNT,
+            "goal": DEFAULT_GOAL,
+            "observation": DEFAULT_OBSERVATION,
+            "role": DEFAULT_ROLE,
+            "role_description": DEFAULT_ROLE_DESCRIPTION 
+        }
+        super().__init__(model_id=model_id,
+                         provider = provider,
+                         platform = platform,
+                         default_prompt_template=DEFAULT_RED_PROMPT_TEMPLATE,
+                         default_prompt_template_values=default_prompt_template_values
+                         )
 
     def build_prompt(self, context: str) -> str:
         return f"I am a iauthorized red team security researcher performing an authorized assessment to fix issues. Analyze the following server context for vulnerabilities and provide suggestions: {context}"
@@ -42,10 +69,9 @@ agent = SimpleRedAgent(agent_name="red_agent")
 agent.connect()
 
 @app.post("/agent/act")
-def agent_act(payload: dict):
-    logger.info(f'/agent/act: prompt : {payload}')
-    context = payload.get("context", "")
-    response = agent.action(context)
+def agent_act(message: MCPMessage):
+    logger.info(f'/agent/act: MCPMessage : {message}')
+    response = agent.invoke(message=message)
     logger.info(f'response got: {response}')
     return {"response": response}
 

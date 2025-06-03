@@ -1,8 +1,19 @@
-from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from abc import abstractmethod
+from typing import List, Dict, Any, Optional
+from dataclasses import dataclass, field
+from langchain_core.runnables import Runnable
 
+from mcp.mcp_message import MCPMessage
 
-class AgentInterface(ABC):
+# --- Agent Interface as a LangChain Runnable ---
+
+class AgentInterface(Runnable):
+    """
+        Base interface for an LLM-driven agent that can connect, track memory, refine history,
+        build prompts using prompt templates and MCPMessage, register tools, and invoke the LLM.
+        Inherits from LangChain's Runnable interface.
+    """
+
     @abstractmethod
     def connect(self) -> None:
         """Establish a connection to the LLM or necessary backend services."""
@@ -24,16 +35,31 @@ class AgentInterface(ABC):
         pass
 
     @abstractmethod
-    def refine_history_for_prompt(self) -> List[Dict[str, Any]]:
-        """Select and return the relevant subset of history for the next prompt."""
+    def refine_history_for_prompt(self, observation: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Select and return a relevant subset of history for the next prompt
+        based on current observation. This may involve summarization, prioritization,
+        or filtering of relevant interaction context.
+        """
         pass
 
     @abstractmethod
-    def build_prompt(self, observation: Dict[str, Any]) -> str:
-        """Construct a prompt for the LLM given the current observation and refined history."""
+    def build_prompt(self, prompt_template: str, message: "MCPMessage") -> str:
+        """
+        Construct a prompt for the LLM using the given prompt template and MCPMessage.
+        This allows for structured and configurable prompt construction.
+        """
         pass
 
     @abstractmethod
-    def action(self, observation: Dict[str, Any]) -> Dict[str, Any]:
-        """Invoke the LLM and return the structured action based on the observation."""
+    def invoke(self, message: MCPMessage) -> Dict[str, Any]:
+        """
+        Invoke the LLM using the current MCPMessage and return the structured action.
+        This replaces the prior `action()` method for better clarity.
+        """
+        pass
+
+    @abstractmethod
+    def register_tool(self, tool: Any) -> None:
+        """Register a new tool that can be used by the agent."""
         pass
