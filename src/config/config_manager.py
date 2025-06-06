@@ -27,7 +27,7 @@ class ConfigManager:
                 return
             with open(self.config_path, "r") as f:
                 self._config = yaml.safe_load(f) or {}
-                logger.info(f"config loaded: {self._config}")
+                logger.info(f"config loaded")
 
     def get(self, *keys, default=None):
         node = self._config
