@@ -53,6 +53,20 @@ def test_sim_model_crud():
         ]
     }
 
+    # 0) Create a persistent model
+    test_name = "SimModel: Create Persistent model"
+    try:
+        persist_mid = str(uuid.uuid4())
+        payload["id"] = persist_mid
+        resp = client.post(f"{base}", json=payload)
+        assert resp.status_code == 200, f"Create status {resp.status_code}"
+        data = resp.json()
+        assert data["id"] == persist_mid
+        print_result(test_name, True)
+        payload["id"] = model_id
+    except AssertionError as e:
+        print_result(test_name, False, str(e))
+
     # 1) Create
     test_name = "SimModel: Create"
     try:
