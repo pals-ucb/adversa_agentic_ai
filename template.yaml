@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: |
+  Agentic AI API server (FastAPI) on AWS Lambda + API Gateway
+  Persists SimModels & PromptTemplates in S3.
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.10
+
+Resources:
+  FastApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: agentic-ai-api
+      Handler: main.handler          # points to src/main.py → handler = Mangum(app)
+      CodeUri: src/                   # zip up everything under src/
+      Role: arn:aws:iam::742745607472:role/Adversa-Agentic-Ai-Sam-Deploy-Role 
+      Environment:
+        Variables:
+          DATA_BUCKET: "adversa-agentic-ai-data"
+          SIM_MODELS_PREFIX: "sim_models"
+          PROMPT_TEMPLATES_PREFIX: "prompt_templates"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+Outputs:
+  ApiUrl:
+    Description: "Invoke URL for API Gateway"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
