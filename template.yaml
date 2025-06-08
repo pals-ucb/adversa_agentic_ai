@@ -16,7 +16,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: agentic-ai-api
-      Handler: main.handler          # points to src/main.py → handler = Mangum(app)
+      Handler: adversa_agentic_ai.main.handler          # points to src/main.py → handler = Mangum(app)
       CodeUri: src/                   # zip up everything under src/
       Role: arn:aws:iam::742745607472:role/Adversa-Agentic-Ai-Sam-Deploy-Role 
       Environment:

@@ -122,5 +122,11 @@ def root():
     # Return the landing page HTML as a response
     return HTMLResponse(content=landing_page_html, status_code=200)
 
+@app.get("/_debug_root")
+def debug_root(request: Request):
+    return {
+        "root_path": request.scope.get("root_path"),
+        "path": request.url.path
+    }
 
 

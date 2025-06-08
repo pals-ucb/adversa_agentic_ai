@@ -21,7 +21,8 @@ class SimModelStore:
     def save(self, model: SimModel, background_tasks: BackgroundTasks) -> SimModel:
         self._store[model.id] = model
         #background_tasks.add_task(self._pstore.save, model)
-        background_tasks.add_task(self._s3store.save, model)
+        #background_tasks.add_task(self._s3store.save, model)
+        self._s3store.save(model)
         return model
 
     def get(self, model_id: str) -> SimModel | None:
@@ -38,14 +39,16 @@ class SimModelStore:
     def update(self, model_id: str, updated_model: SimModel, background_tasks: BackgroundTasks) -> SimModel:
         self._store[model_id] = updated_model
         #background_tasks.add_task(self._pstore.save, updated_model)
-        background_tasks.add_task(self._s3store.save, updated_model)
+        #background_tasks.add_task(self._s3store.save, updated_model)
+        self._s3store.save(updated_model)
         return updated_model
 
     def delete(self, model_id: str, background_tasks: BackgroundTasks) -> None:
         if model_id in self._store:
             del self._store[model_id]
         #background_tasks.add_task(self._pstore.delete, model_id)
-        background_tasks.add_task(self._s3store.delete, model_id)
+        #background_tasks.add_task(self._s3store.delete, model_id)
+        self._s3store.delete(model)
 
     def list_all(self, background_tasks: BackgroundTasks) -> List[SimModel]:
         return list(self._store.values())

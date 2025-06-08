@@ -5,15 +5,48 @@ Standalone test runner for SimModel and PromptTemplate CRUD endpoints.
 No pytest required—simply execute this script with the correct PYTHONPATH.
 """
 
+import argparse
 import uuid
 import sys
 import traceback
-from fastapi.testclient import TestClient
-from adversa_agentic_ai.api.api_server import app
+import requests
+import time
 
-client = TestClient(app)
+# reuse your existing constants
 BASE_SIM = "/aaa/sim/models"
-BASE_PROMPT = "/aaa/prompts/templates"
+BASE_PROMPT = "/aaa/prompt/templates"
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Smoke-test the Agentic AI API Server"
+    )
+    parser.add_argument("--base-url", required=False, default="http://127.0.0.1:8080",
+        help="Base URL of the API under test"
+    )
+    return parser.parse_args()
+
+class APIClient:
+    def __init__(self, base_url: str):
+        # strip trailing slash if given
+        self.base_url = base_url.rstrip("/")
+        self.session = requests.Session()
+
+    def get(self, path: str, **kwargs):
+        url = f"{self.base_url}{path}"
+        return self.session.get(url, **kwargs)
+
+    def post(self, path: str, json=None, **kwargs):
+        url = f"{self.base_url}{path}"
+        return self.session.post(url, json=json, **kwargs)
+
+    def put(self, path: str, json=None, **kwargs):
+        url = f"{self.base_url}{path}"
+        return self.session.put(url, json=json, **kwargs)
+
+    def delete(self, path: str, json=None, **kwargs):
+        url = f"{self.base_url}{path}"
+        return self.session.delete(url, json=json, **kwargs)
+
 
 
 def print_result(test_name, success, detail=""):
@@ -21,7 +54,7 @@ def print_result(test_name, success, detail=""):
     print(f"[{status}] {test_name}{': ' + detail if detail else ''}")
 
 
-def test_health_check():
+def test_health_check(client):
     name = "Health check"
     try:
         resp = client.get("/health")
@@ -32,7 +65,7 @@ def test_health_check():
         print_result(name, False, str(e))
 
 
-def test_sim_model_crud():
+def test_sim_model_crud(client):
     base = BASE_SIM
     model_id = str(uuid.uuid4())
     payload = {
@@ -111,6 +144,7 @@ def test_sim_model_crud():
         data = resp.json()
         assert data == {"status": "deleted"}, f"Unexpected delete response {data}"
         print_result(test_name, True)
+        time.sleep(1)
     except AssertionError as e:
         print_result(test_name, False, str(e))
 
@@ -150,7 +184,7 @@ def test_sim_model_crud():
         print_result(test_name, False, str(e))
 
 
-def test_prompt_template_crud():
+def test_prompt_template_crud(client):
     base = BASE_PROMPT
     prompt_id = str(uuid.uuid4())
     payload = {
@@ -206,6 +240,7 @@ def test_prompt_template_crud():
         # Assuming delete returns {"status": "deleted"} or similar
         assert "deleted" in data.get("status", "")
         print_result(test_name, True)
+        time.sleep(2)
     except AssertionError as e:
         print_result(test_name, False, str(e))
 
@@ -220,16 +255,20 @@ def test_prompt_template_crud():
 
 
 def main():
+    args = parse_args()
+    client = APIClient(args.base_url)
+
+    print("\n--- Running ApiServer Health check Tests ---")
+    test_health_check(client)
     print("\n--- Running SimModel CRUD Tests ---")
-    test_sim_model_crud()
+    test_sim_model_crud(client)
     print("\n--- Running PromptTemplate CRUD Tests ---")
-    test_prompt_template_crud()
+    test_prompt_template_crud(client)
     print("\n--- All tests complete ---\n")
 
 
 if __name__ == "__main__":
     try:
-        test_health_check()
         main()
     except Exception:
         traceback.print_exc()

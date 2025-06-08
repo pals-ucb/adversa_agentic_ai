@@ -23,25 +23,28 @@ class PromptTemplateStore:
         template = self.templates.get(template_id)
         if not template:
             template = self._s3store.load(template_id)
-            self.template[template_id] = template
+            self.templates[template_id] = template
         return template
 
     def save(self, template: PromptTemplate, background_tasks: BackgroundTasks) -> PromptTemplate:
         self.templates[template.id] = template
         #background_tasks.add_task(self._pstore.save, template)
-        background_tasks.add_task(self._s3store.save, template)
+        #background_tasks.add_task(self._s3store.save, template)
+        self._s3store.save(template)
         return template
 
     def update(self, template_id: str, template: PromptTemplate, background_tasks: BackgroundTasks) -> PromptTemplate:
         self.templates[template_id] = template
         #background_tasks.add_task(self._pstore.save, template)
-        background_tasks.add_task(self._s3store.save, template)
+        #background_tasks.add_task(self._s3store.save, template)
+        self._s3store.save(template)
         return template
 
     def delete(self, template_id: str, background_tasks: BackgroundTasks):
         self.templates.pop(template_id, None)
         #background_tasks.add_task(self._pstore.delete, template_id)
-        background_tasks.add_task(self._s3store.delete, template_id)
+        #background_tasks.add_task(self._s3store.delete, template_id)
+        self._s3store.delete(template_id)
 
     def list_all(self, background_tasks: BackgroundTasks) -> List[PromptTemplate]:
         return list(self.templates.values())
