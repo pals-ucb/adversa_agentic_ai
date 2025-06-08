@@ -41,7 +41,8 @@ class PromptTemplateStore:
         return template
 
     def delete(self, template_id: str, background_tasks: BackgroundTasks):
-        self.templates.pop(template_id, None)
+        if template_id in self.templates:
+            del self.templates[template_id]
         #background_tasks.add_task(self._pstore.delete, template_id)
         #background_tasks.add_task(self._s3store.delete, template_id)
         self._s3store.delete(template_id)

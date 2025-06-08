@@ -48,7 +48,7 @@ class SimModelStore:
             del self._store[model_id]
         #background_tasks.add_task(self._pstore.delete, model_id)
         #background_tasks.add_task(self._s3store.delete, model_id)
-        self._s3store.delete(model)
+        self._s3store.delete(model_id)
 
     def list_all(self, background_tasks: BackgroundTasks) -> List[SimModel]:
         return list(self._store.values())

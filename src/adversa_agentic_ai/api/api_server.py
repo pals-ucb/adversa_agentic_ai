@@ -1,5 +1,5 @@
 # File: src/api/api_server.py
-from fastapi.responses import HTMLResponse
+import os
 from adversa_agentic_ai.utils.config_logger import (
     set_current_agent,
     setup_logger,
@@ -11,9 +11,9 @@ set_current_agent(app_name)
 setup_logger(app_name)
 logger = get_agent_logger()
 
-from fastapi import FastAPI
+from fastapi import FastAPI,Request
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import Request
 import time
 
 # Routers
@@ -24,9 +24,13 @@ from .routers.sim_models import router as sim_models_router
 from .routers.sim import router as sim_runtime_router
 from .config_api import router as config_router
 
-
+stage = os.getenv("STAGE", "Prod")           # or hard-code "Prod"
 app = FastAPI(
     title="Adversarial Agentic AI API",
+    root_path=f"/{stage}",                    # ← this makes spec-url include /Prod
+    openapi_url="/openapi.json",              # still the same path, but prefixed
+    docs_url="/docs",
+    redoc_url="/redoc",
     version="0.1.0",
     description="""
 API for managing simulation models (`SimModel`), PromptTemplates, Agents(Red/Blue), Providers and LLM Selections.

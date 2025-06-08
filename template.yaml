@@ -21,6 +21,7 @@ Resources:
       Role: arn:aws:iam::742745607472:role/Adversa-Agentic-Ai-Sam-Deploy-Role 
       Environment:
         Variables:
+          STAGE: "Prod"
           DATA_BUCKET: "adversa-agentic-ai-data"
           SIM_MODELS_PREFIX: "sim_models"
           PROMPT_TEMPLATES_PREFIX: "prompt_templates"
