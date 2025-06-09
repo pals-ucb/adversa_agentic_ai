@@ -1,8 +1,17 @@
 {
     "python.analysis.extraPaths": [
-        "./src",
+        "./src/adversa_agentic_ai",
         "./modules/agentic_cbsim"
     ],
     "python.envFile": "${workspaceFolder}/.env",
-    "python.defaultInterpreterPath": "/home/pals/miniconda3/envs/cbsim/bin/python"
+    "python.defaultInterpreterPath": "/home/pals/miniconda3/envs/cbsim/bin/python",
+    // ensure Pylance is driving analysis
+    "python.languageServer": "Pylance",
+    // let Pylance suggest imports from installed packages
+    "python.analysis.autoImportCompletions": true,
+    // optional but often useful:
+    "python.analysis.useLibraryCodeForTypes": true,
+    // make sure suggestions pop up as you type
+    "editor.quickSuggestions": { "other": true, "comments": false, "strings": false },
+    "editor.suggestOnTriggerCharacters": true
 }

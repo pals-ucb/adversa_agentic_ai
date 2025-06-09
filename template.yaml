@@ -16,21 +16,26 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: agentic-ai-api
-      Handler: main.handler          # points to src/main.py → handler = Mangum(app)
+      Handler: adversa_agentic_ai.main.handler          # points to src/main.py → handler = Mangum(app)
       CodeUri: src/                   # zip up everything under src/
       Role: arn:aws:iam::742745607472:role/Adversa-Agentic-Ai-Sam-Deploy-Role 
       Environment:
         Variables:
+          STAGE: "Prod"
           DATA_BUCKET: "adversa-agentic-ai-data"
           SIM_MODELS_PREFIX: "sim_models"
           PROMPT_TEMPLATES_PREFIX: "prompt_templates"
       Events:
-        Api:
+        RootGet:
           Type: Api
           Properties:
-            Path: /{proxy+}
+            Path: /          # explicit root
             Method: ANY
-
+        ProxyAll:
+          Type: Api
+          Properties:
+            Path: /{proxy+} # all other paths
+            Method: ANY
 Outputs:
   ApiUrl:
     Description: "Invoke URL for API Gateway"

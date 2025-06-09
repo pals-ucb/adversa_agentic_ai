@@ -21,7 +21,6 @@ dependencies = [
     "uvicorn>=0.29",
     "langchain-core>=0.1.50",
     "pydantic>=2.6",
-    "uuid",
     "mangum>=0.19.0",
 ]
 requires-python = ">=3.10"
