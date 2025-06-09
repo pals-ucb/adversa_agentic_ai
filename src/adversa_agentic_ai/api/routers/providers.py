@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from typing import List
 from ..schemas.providers import Provider
 from ..stores.provider_store import ProviderStore
@@ -47,6 +47,7 @@ def update_provider(provider_id: str, provider: Provider):
 
 @router.delete(
     "/{provider_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a provider",
     description="Removes a provider and its associated configuration from the system."
 )

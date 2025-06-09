@@ -26,12 +26,16 @@ Resources:
           SIM_MODELS_PREFIX: "sim_models"
           PROMPT_TEMPLATES_PREFIX: "prompt_templates"
       Events:
-        Api:
+        RootGet:
           Type: Api
           Properties:
-            Path: /{proxy+}
+            Path: /          # explicit root
             Method: ANY
-
+        ProxyAll:
+          Type: Api
+          Properties:
+            Path: /{proxy+} # all other paths
+            Method: ANY
 Outputs:
   ApiUrl:
     Description: "Invoke URL for API Gateway"

@@ -13,7 +13,7 @@ from adversa_agentic_ai.utils.config_logger import get_agent_logger
 logger = get_agent_logger()
 
 class ConfigManager:
-    def __init__(self, config_file="src/adversa_agentic_ai/config/config.yaml"):
+    def __init__(self, config_file="config/config.yaml"):
 
         self.config_path = os.path.join(find_workspace_root(), config_file)
         self._lock = Lock()

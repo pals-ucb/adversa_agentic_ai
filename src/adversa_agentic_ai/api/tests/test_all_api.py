@@ -86,20 +86,6 @@ def test_sim_model_crud(client):
         ]
     }
 
-    # 0) Create a persistent model
-    test_name = "SimModel: Create Persistent model"
-    try:
-        persist_mid = str(uuid.uuid4())
-        payload["id"] = persist_mid
-        resp = client.post(f"{base}", json=payload)
-        assert resp.status_code == 200, f"Create status {resp.status_code}"
-        data = resp.json()
-        assert data["id"] == persist_mid
-        print_result(test_name, True)
-        payload["id"] = model_id
-    except AssertionError as e:
-        print_result(test_name, False, str(e))
-
     # 1) Create
     test_name = "SimModel: Create"
     try:
@@ -140,11 +126,8 @@ def test_sim_model_crud(client):
     test_name = "SimModel: Delete"
     try:
         resp = client.delete(f"{base}/{model_id}")
-        assert resp.status_code == 200, f"Delete status {resp.status_code}"
-        data = resp.json()
-        assert data == {"status": "deleted"}, f"Unexpected delete response {data}"
+        assert resp.status_code == 204, f"Delete status {resp.status_code}"
         print_result(test_name, True)
-        time.sleep(1)
     except AssertionError as e:
         print_result(test_name, False, str(e))
 
@@ -235,12 +218,8 @@ def test_prompt_template_crud(client):
     test_name = "PromptTemplate: Delete"
     try:
         resp = client.delete(f"{base}/{prompt_id}")
-        assert resp.status_code == 200, f"Delete status {resp.status_code}"
-        data = resp.json()
-        # Assuming delete returns {"status": "deleted"} or similar
-        assert "deleted" in data.get("status", "")
+        assert resp.status_code == 204, f"Delete status {resp.status_code}"
         print_result(test_name, True)
-        time.sleep(2)
     except AssertionError as e:
         print_result(test_name, False, str(e))
 

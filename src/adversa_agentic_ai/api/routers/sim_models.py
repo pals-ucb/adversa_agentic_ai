@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, status
 from typing import List
 from adversa_agentic_ai.utils.config_logger import get_agent_logger
 from ..schemas.sim_models import SimModel
 from ..stores.sim_model_store import SimModelStore
+from botocore.exceptions import ClientError
 
 logger = get_agent_logger()
 
@@ -51,14 +52,36 @@ def update_sim_model(model_id: str, updated_model: SimModel, background_tasks: B
 
 @router.delete(
     "/{model_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a simulation model",
     description="Removes a SimModel from the system by its ID."
 )
 def delete_sim_model(model_id: str, background_tasks: BackgroundTasks):
     if not sim_model_db.get(model_id):
         raise HTTPException(status_code=404, detail="Model not found")
-    sim_model_db.delete(model_id, background_tasks)
-    return {"status": "deleted"}
+    try:
+        sim_model_db.delete(model_id, background_tasks)
+        logger.info(f"Sim Model delete completed successfully, model_id: {model_id}")
+    except ClientError as ce:
+        code = ce.response["Error"]["Code"]
+        # 404 for missing key
+        if code == "NoSuchKey":
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        if code in ("AccessDenied", "AllAccessDisabled"):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+        logger.error(f"Sim Model delete ClientError code: {code}, model_id: {model_id} exception: {ce}")
+    except Exception as e:
+        # log the unexpected exception
+        logger.error(f"Unexpected error deleting S3 object: {e}")
+        # return a generic 500
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal error deleting object"
+        )
+    return
+
+
+
 
 @router.get(
     "",

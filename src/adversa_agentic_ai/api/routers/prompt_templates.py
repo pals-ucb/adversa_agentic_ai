@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, status
 from typing import List
 from ..schemas.prompt_templates import PromptTemplate
 from ..stores.prompt_template_store import PromptTemplateStore
@@ -47,6 +47,7 @@ def update_template(template_id: str, updated: PromptTemplate, background_tasks:
 
 @router.delete(
     "/templates/{template_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a prompt template",
     description="Deletes the specified prompt template from the system."
 )

@@ -1,13 +1,18 @@
 import os
 
-def find_workspace_root(start_path: str = __file__) -> str:
+def find_workspace_root(marker_dir: str = "adversa_agentic_ai") -> str:
     """
-    Traverses upward from the given path until it finds a marker of the workspace root,
-    such as a .git directory or pyproject.toml file.
+    Walks up from the current file’s directory until it finds
+    a directory named `marker_dir`, and returns its path.
+    Raises RuntimeError if not found.
     """
-    path = os.path.abspath(os.path.dirname(start_path))
-    while path != os.path.dirname(path):  # until we reach the filesystem root
-        if os.path.exists(os.path.join(path, ".git")) or os.path.exists(os.path.join(path, "pyproject.toml")):
+    path = os.path.abspath(os.path.dirname(__file__))
+    while True:
+        if os.path.basename(path) == marker_dir:
             return path
-        path = os.path.dirname(path)
-    return os.path.abspath(os.path.dirname(start_path))  # fallback
+        parent = os.path.dirname(path)
+        if parent == path:
+            # we’ve reached the filesystem root
+            break
+        path = parent
+    raise RuntimeError(f"Could not find workspace root '{marker_dir}' in any parent of {__file__}")

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from typing import List
 from ..schemas.agents import Agent
 from ..stores.agent_store import AgentStore
@@ -30,7 +30,12 @@ def update_agent(agent_id: str, agent: Agent):
         raise HTTPException(status_code=404, detail="Agent not found")
     return agent_db.update(agent_id, agent)
 
-@router.delete("/{agent_id}", summary="Delete an agent", description="Deletes the specified agent from the registry.")
+@router.delete(
+        "/{agent_id}", 
+        status_code=status.HTTP_204_NO_CONTENT, 
+        summary="Delete an agent", 
+        description="Deletes the specified agent from the registry."
+        )
 def delete_agent(agent_id: str):
     if not agent_db.get(agent_id):
         raise HTTPException(status_code=404, detail="Agent not found")
