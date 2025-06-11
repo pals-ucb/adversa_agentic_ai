@@ -1,18 +1,17 @@
+import logging
+from adversa_agentic_ai.utils.config_logger import get_agent_logger
 from dataclasses import dataclass, field
-from fastapi import FastAPI
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 from uuid import uuid4
-from abc import ABC
-
 from adversa_agentic_ai.mcp.mcp_message import MCPMessage
 from .agent_interface import AgentInterface
 from adversa_agentic_ai.providers.llm_factory import get_llm_client
-import logging
 from langchain_core.runnables import Runnable
 from langchain_core.tools import Tool
-from langchain.memory import ConversationBufferMemory
+from langchain.chains.conversation.memory import ConversationBufferMemory
+#from langchain_core.retrievers import VectorStoreRetriever
 from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_core.prompts import PromptTemplate
 
@@ -51,7 +50,7 @@ class LLMBaseAgent(AgentInterface):
         self.history: List[PromptHistoryEntry] = []
         self.connected = False
         self.llm_client = get_llm_client(provider, platform)
-        self.logger = logging.getLogger("llm_agent")
+        self.logger = get_agent_logger()
         # Memory components
         self.conversational_memory = ConversationBufferMemory()
         self.summary_memory = []  # Could be summaries of past dialogues
@@ -60,6 +59,7 @@ class LLMBaseAgent(AgentInterface):
         self.tools: List[Tool] = []
         self.default_prompt_template = default_prompt_template
         self.default_prompt_template_values = default_prompt_template_values
+        self.connect()
 
     def connect(self):
         self.llm_client.connect(model_id=self.model_id)
