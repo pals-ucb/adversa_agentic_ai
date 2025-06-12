@@ -5,16 +5,15 @@
 import yaml
 import os
 from threading import Lock
-import logging
+#import logging
 from adversa_agentic_ai.utils.fsutils import find_workspace_root
-from adversa_agentic_ai.utils.config_logger import setup_logger
+#from adversa_agentic_ai.utils.config_logger import setup_logger
 from adversa_agentic_ai.utils.config_logger import get_agent_logger
 
-logger = get_agent_logger()
 
 class ConfigManager:
     def __init__(self, config_file="config/config.yaml"):
-
+        self.logger = get_agent_logger()
         self.config_path = os.path.join(find_workspace_root(), config_file)
         self._lock = Lock()
         self._load()
@@ -22,16 +21,16 @@ class ConfigManager:
     def _load(self):
         with self._lock:
             if not os.path.exists(self.config_path):
-                logger.error(f'Config file not found: {self.config_path}')
+                self.logger.error(f'Config file not found: {self.config_path}')
                 self._config = {}
                 return
             with open(self.config_path, "r") as f:
                 self._config = yaml.safe_load(f) or {}
-                logger.info(f"config loaded")
+                self.logger.info(f"config loaded")
 
     def get(self, *keys, default=None):
         node = self._config
-        logger.debug(f'Get: keys = {keys}')
+        self.logger.debug(f'Get: keys = {keys}')
         for key in keys:
             if isinstance(node, dict) and key in node:
                 node = node[key]
@@ -62,4 +61,11 @@ class ConfigManager:
         return None
 
 # Singleton instance
-config_manager = ConfigManager()
+config_manager: ConfigManager = None
+
+def get_config_manager():
+    global config_manager
+    if config_manager:
+        return config_manager
+    config_manager = ConfigManager()
+    return config_manager

@@ -1,85 +1,122 @@
-# A simple Red Agent for getting started
+# File: simple_red_agent.py
+# Implements the SimpleRedAgent class as an ASGI app factory
+
+## Need to setup logger first thing so that
+## we use the same logger file created in main
+import os
+import re
 import logging
-from fastapi import FastAPI
+from enum import Enum
+from adversa_agentic_ai.utils.config_logger import set_current_agent, setup_logger, get_agent_logger
+
+agent_name = os.environ.get("AGENT_NAME", "red_agent")
+set_current_agent(agent_name)
+setup_logger(agent_name, level=logging.DEBUG)
+
+
+from fastapi import FastAPI, HTTPException
+from typing import List
 from adversa_agentic_ai.agents.base.llm_base_agent import LLMBaseAgent
 from adversa_agentic_ai.mcp.mcp_message import MCPMessage
-from adversa_agentic_ai.utils.config_logger import setup_logger
-from adversa_agentic_ai.config.config_manager import config_manager
-from adversa_agentic_ai.utils.config_logger import get_agent_logger
-
-logger = get_agent_logger()
-
+from adversa_agentic_ai.config.config_manager import get_config_manager
 from adversa_agentic_ai.prompts.templates.red_agent.default import (
     DEFAULT_ACTION_DESCRIPTION,
     DEFAULT_EVENT_COUNT,
-    DEFAULT_GOAL,
-    DEFAULT_OBSERVATION,
-    DEFAULT_RED_PROMPT_TEMPLATE,
     DEFAULT_ROLE,
-    DEFAULT_ROLE_DESCRIPTION
+    DEFAULT_ROLE_DESCRIPTION,
+    DEFAULT_RED_PROMPT_TEMPLATE,
+    DEFAULT_CONSTRAINTS
 )
+from adversa_agentic_ai.prompts.responses.red_llm.response import RedLlmResponse
+
+logger = get_agent_logger()
+
+class RedAgentActions(str, Enum):
+    BRUTE_FORCE_SSH = "brute_force_ssh"
+    SQL_INJECTION = "sql_injection"
+    EXPLOIT_KNOWN_CVE = "exploit_known_cve"
+    CUSTOM_PAYLOAD_UPLOAD = "custom_payload_upload"
+    ENUMERATE_USER_ROLES = "enumerate_user_roles"
+    FINGERPRINT_WEBSERVER = "fingerprint_webserver"
+
 
 class SimpleRedAgent(LLMBaseAgent):
     def __init__(self, agent_name: str):
         logger.info(f"Initializing Red Agent with name: {agent_name}")
+        config_manager = get_config_manager()
         agent_cfg = config_manager.get_agent_by_name(agent_name)
         if not agent_cfg:
             logger.error(f"Agent configuration not found for: {agent_name}")
             raise Exception(f"Agent name '{agent_name}' not found in configuration.")
-        
+
         model_id = agent_cfg.get("model_id")
         host = agent_cfg.get("host")
         port = agent_cfg.get("port")
         provider = agent_cfg.get("provider")
         platform = agent_cfg.get("platform")
 
-        if not model_id:
-            logger.error(f"Missing 'model_id' for agent: {agent_name}")
-            raise Exception(f"'model_id' not configured for agent '{agent_name}'")
+        for field in ("model_id", "host", "port"):
+            if not agent_cfg.get(field):
+                logger.error(f"Missing '{field}' for agent: {agent_name}")
+                raise Exception(f"'{field}' not configured for agent '{agent_name}'")
 
-        if not host:
-            logger.error(f"Missing 'host' for agent: {agent_name}")
-            raise Exception(f"'host' not configured for agent '{agent_name}'")
-        if not port:
-            logger.error(f"Missing 'port' for agent: {agent_name}")
-            raise Exception(f"'port' not configured for agent '{agent_name}'")
         logger.info(f"Red Agent '{agent_name}' configured with model '{model_id}' at {host}:{port}")
 
-        default_prompt_template_values = {
+        defaults = {
             "action_description": DEFAULT_ACTION_DESCRIPTION,
             "event_count": DEFAULT_EVENT_COUNT,
-            "goal": DEFAULT_GOAL,
-            "observation": DEFAULT_OBSERVATION,
             "role": DEFAULT_ROLE,
-            "role_description": DEFAULT_ROLE_DESCRIPTION 
+            "role_description": DEFAULT_ROLE_DESCRIPTION,
+            "constraints": DEFAULT_CONSTRAINTS
         }
-        super().__init__(model_id=model_id,
-                         provider = provider,
-                         platform = platform,
-                         default_prompt_template=DEFAULT_RED_PROMPT_TEMPLATE,
-                         default_prompt_template_values=default_prompt_template_values
-                         )
 
-    def build_prompt(self, context: str) -> str:
-        return f"I am a iauthorized red team security researcher performing an authorized assessment to fix issues. Analyze the following server context for vulnerabilities and provide suggestions: {context}"
+        super().__init__(
+            model_id=model_id,
+            provider=provider,
+            platform=platform,
+            default_prompt_template=DEFAULT_RED_PROMPT_TEMPLATE,
+            default_prompt_template_values=defaults,
+        )
 
-# FastAPI app for interacting with agent
-app = FastAPI()
-agent = SimpleRedAgent(agent_name="red_agent")
-agent.connect()
+    '''def build_prompt(self, context: str) -> str:
+        return (
+            "I am an authorized red team security researcher performing an authorized assessment. "
+            f"Analyze the following server context for vulnerabilities and provide suggestions: {context}"
+        )'''
 
-@app.post("/agent/act")
-def agent_act(message: MCPMessage):
-    logger.info(f'/agent/act: MCPMessage : {message}')
-    response = agent.invoke(message=message)
-    logger.info(f'response got: {response}')
-    return {"response": response}
+    def register_routes(self, app: FastAPI):
+        """Attach FastAPI routes to the given app instance."""
+        @app.post("/agent/act")
+        def agent_act(message: MCPMessage):
+            logger.info(f"/agent/act: MCPMessage: {message}")
+            r = self.invoke(message=message)
+            # Strip markdown code fence if present
+            cleaned = re.sub(r"^```json\\n|\\n```$", "", r['response'].strip())
+            # Optional safety: strip triple backticks even without `json` label
+            cleaned = re.sub(r"^```|```$", "", cleaned.strip())
+            llm_response = RedLlmResponse.parse_raw(cleaned)   
+            logger.info(f"response got: {llm_response}")
+            return {"response": llm_response}
 
-@app.get("/agent/history")
-def get_history():
-    return agent.get_history()
+        @app.get("/agent/history")
+        def get_history():
+            return self.get_history()
 
-@app.delete("/agent/history")
-def clear_history():
-    agent.history.clear()
-    return {"message": "History cleared."}
+        @app.delete("/agent/history")
+        def clear_history():
+            self.history.clear()
+            return {"message": "History cleared."}
+
+    async def __call__(self, scope, receive, send):
+        # Lazy import of FastAPI to avoid circular on module load
+        if not hasattr(self, 'app'):
+            self.app = FastAPI(title=f"SimpleRedAgent ({self.model_id})")
+            self.register_routes(self.app)
+        await self.app(scope, receive, send)
+
+    def get_agent_specific_actions(self) -> List[str]:
+        return [e.value for e in RedAgentActions]
+
+
+def agent_factory() -> SimpleRedAgent:
+    return SimpleRedAgent(agent_name)
