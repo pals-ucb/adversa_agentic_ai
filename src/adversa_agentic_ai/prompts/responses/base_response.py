@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 
-class AgentBaseResponse(BaseModel):
+class BaseLlmResponse(BaseModel):
     suggested_action: str = Field(..., description="The action chosen from available_actions")
     best_action: str = Field(..., description="The best action possible when available_actions is limited in scope.")
     rationale: str = Field(..., description="Short justification for the choice")

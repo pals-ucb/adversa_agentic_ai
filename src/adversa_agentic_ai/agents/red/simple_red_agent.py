@@ -4,6 +4,7 @@
 ## Need to setup logger first thing so that
 ## we use the same logger file created in main
 import os
+import re
 import logging
 from enum import Enum
 from adversa_agentic_ai.utils.config_logger import set_current_agent, setup_logger, get_agent_logger
@@ -26,6 +27,7 @@ from adversa_agentic_ai.prompts.templates.red_agent.default import (
     DEFAULT_RED_PROMPT_TEMPLATE,
     DEFAULT_CONSTRAINTS
 )
+from adversa_agentic_ai.prompts.responses.red_llm.response import RedLlmResponse
 
 logger = get_agent_logger()
 
@@ -87,9 +89,14 @@ class SimpleRedAgent(LLMBaseAgent):
         @app.post("/agent/act")
         def agent_act(message: MCPMessage):
             logger.info(f"/agent/act: MCPMessage: {message}")
-            response = self.invoke(message=message)
-            logger.info(f"response got: {response}")
-            return {"response": response}
+            r = self.invoke(message=message)
+            # Strip markdown code fence if present
+            cleaned = re.sub(r"^```json\\n|\\n```$", "", r['response'].strip())
+            # Optional safety: strip triple backticks even without `json` label
+            cleaned = re.sub(r"^```|```$", "", cleaned.strip())
+            llm_response = RedLlmResponse.parse_raw(cleaned)   
+            logger.info(f"response got: {llm_response}")
+            return {"response": llm_response}
 
         @app.get("/agent/history")
         def get_history():
