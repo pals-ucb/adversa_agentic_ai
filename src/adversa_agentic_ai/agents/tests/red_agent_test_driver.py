@@ -3,7 +3,7 @@ import requests
 from typing import List
 from pydantic import BaseModel
 from adversa_agentic_ai.mcp.mcp_message import MCPMessage
-
+from adversa_agentic_ai.agents.red.simple_red_agent import RedAgentActions
 
 # Reuse Prompt classes (used for structured observation)
 class Software(BaseModel):
@@ -73,6 +73,11 @@ def main():
         "time_limit": "10 steps"
     }
 
+    # List of available red-team actions from the enum
+    # This needs to be revisited. We should add new actions that is not in
+    # the RedAgentActions
+    available_actions = [action.value for action in RedAgentActions]
+
     # Construct MCPMessage
     message = MCPMessage(
         role=args.role,
@@ -82,7 +87,8 @@ def main():
         action_description=args.action_description,
         prompt_template=args.prompt_template if args.prompt_template else None,
         observation=observation,
-        constraints=constraints
+        constraints=constraints,
+        available_actions=available_actions
     )
 
     # Send to agent

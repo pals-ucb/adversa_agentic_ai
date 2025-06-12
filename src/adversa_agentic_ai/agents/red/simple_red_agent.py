@@ -5,6 +5,7 @@
 ## we use the same logger file created in main
 import os
 import logging
+from enum import Enum
 from adversa_agentic_ai.utils.config_logger import set_current_agent, setup_logger, get_agent_logger
 
 agent_name = os.environ.get("AGENT_NAME", "red_agent")
@@ -13,20 +14,29 @@ setup_logger(agent_name, level=logging.DEBUG)
 
 
 from fastapi import FastAPI, HTTPException
+from typing import List
 from adversa_agentic_ai.agents.base.llm_base_agent import LLMBaseAgent
 from adversa_agentic_ai.mcp.mcp_message import MCPMessage
 from adversa_agentic_ai.config.config_manager import get_config_manager
 from adversa_agentic_ai.prompts.templates.red_agent.default import (
     DEFAULT_ACTION_DESCRIPTION,
     DEFAULT_EVENT_COUNT,
-    DEFAULT_GOAL,
-    DEFAULT_OBSERVATION,
-    DEFAULT_RED_PROMPT_TEMPLATE,
     DEFAULT_ROLE,
-    DEFAULT_ROLE_DESCRIPTION
+    DEFAULT_ROLE_DESCRIPTION,
+    DEFAULT_RED_PROMPT_TEMPLATE,
+    DEFAULT_CONSTRAINTS
 )
 
 logger = get_agent_logger()
+
+class RedAgentActions(str, Enum):
+    BRUTE_FORCE_SSH = "brute_force_ssh"
+    SQL_INJECTION = "sql_injection"
+    EXPLOIT_KNOWN_CVE = "exploit_known_cve"
+    CUSTOM_PAYLOAD_UPLOAD = "custom_payload_upload"
+    ENUMERATE_USER_ROLES = "enumerate_user_roles"
+    FINGERPRINT_WEBSERVER = "fingerprint_webserver"
+
 
 class SimpleRedAgent(LLMBaseAgent):
     def __init__(self, agent_name: str):
@@ -53,10 +63,9 @@ class SimpleRedAgent(LLMBaseAgent):
         defaults = {
             "action_description": DEFAULT_ACTION_DESCRIPTION,
             "event_count": DEFAULT_EVENT_COUNT,
-            "goal": DEFAULT_GOAL,
-            "observation": DEFAULT_OBSERVATION,
             "role": DEFAULT_ROLE,
             "role_description": DEFAULT_ROLE_DESCRIPTION,
+            "constraints": DEFAULT_CONSTRAINTS
         }
 
         super().__init__(
@@ -67,11 +76,11 @@ class SimpleRedAgent(LLMBaseAgent):
             default_prompt_template_values=defaults,
         )
 
-    def build_prompt(self, context: str) -> str:
+    '''def build_prompt(self, context: str) -> str:
         return (
             "I am an authorized red team security researcher performing an authorized assessment. "
             f"Analyze the following server context for vulnerabilities and provide suggestions: {context}"
-        )
+        )'''
 
     def register_routes(self, app: FastAPI):
         """Attach FastAPI routes to the given app instance."""
@@ -97,6 +106,10 @@ class SimpleRedAgent(LLMBaseAgent):
             self.app = FastAPI(title=f"SimpleRedAgent ({self.model_id})")
             self.register_routes(self.app)
         await self.app(scope, receive, send)
+
+    def get_agent_specific_actions(self) -> List[str]:
+        return [e.value for e in RedAgentActions]
+
 
 def agent_factory() -> SimpleRedAgent:
     return SimpleRedAgent(agent_name)
