@@ -8,15 +8,16 @@ import json
 
 class MCPMessage(BaseModel):
     role: str                                  # Agent role, e.g., "Planner", "Red", "Blue", "Inspector"
+    role_description: str
     goal: str
+    goal_description: str
     event_count: int
     observation: Dict[str, Any]
+    prompt_template: str    
+    available_actions: List[str] = None  # Optional list of actions 
+    history: Optional[List[Dict[str, Any]]] = []  # [{"action": ..., "input": ..., "result": ..., "reward": ...}]
     constraints: Optional[Dict[str, Any]] = None
-    role_description: Optional[str] = None
-    action_description: Optional[str] = None
-    prompt_template: Optional[str] = None   
-    available_actions: Optional[List[str]] = None  # Optional override from Orchestrator
-    history: List[Dict[str, Any]] = []  # [{"action": ..., "input": ..., "result": ..., "reward": ...}]
+    available_tools: Optional[List[str]] = None  # Optional list of tools
 
     def _format_observation(self) -> str:
         return json.dumps(self.observation, indent=2)

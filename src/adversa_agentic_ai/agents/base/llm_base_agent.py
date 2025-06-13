@@ -1,4 +1,5 @@
 # Updated MCPMessage with action management and Base Agent with Enums and Tools
+import re
 from shlex import join
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
@@ -15,6 +16,7 @@ from langchain_core.prompts import PromptTemplate
 from adversa_agentic_ai.utils.config_logger import get_agent_logger
 from adversa_agentic_ai.mcp.mcp_message import MCPMessage
 from adversa_agentic_ai.providers.llm_factory import get_llm_client
+from adversa_agentic_ai.config.config_manager import get_config_manager
 from .agent_interface import AgentInterface
 
 # Enums for prompt metadata
@@ -31,11 +33,6 @@ class Rewarding(str, Enum):
     yes = "yes"
     no = "no"
 
-# Clean this up and keep only generic actions.
-class BaseActions(str, Enum):
-    port_scan = "port_scan"
-    email_phishing = "email_phishing"
-    default_credentials_attempt = "default_credentials_attempt"
 
 # Prompt History Entry
 class PromptHistoryEntry(BaseModel):
@@ -52,8 +49,7 @@ class LLMBaseAgent(AgentInterface, ABC):
                  model_id: str, 
                  provider: str,
                  platform: str,
-                 default_prompt_template: Optional[str] = None,
-                 default_prompt_template_values: Optional[Dict[str,Any]] = None):
+                 max_tokens: int = 512):
         self.model_id = model_id
         self.history: List[PromptHistoryEntry] = []
         self.connected = False
@@ -63,8 +59,7 @@ class LLMBaseAgent(AgentInterface, ABC):
         self.summary_memory = []
         self.vector_memory: Optional[VectorStoreRetriever] = None
         self.tools: List[Tool] = []
-        self.default_prompt_template = default_prompt_template
-        self.default_prompt_template_values = default_prompt_template_values or {}
+        self.max_tokens = max_tokens
         self.connect()
 
     def connect(self):
@@ -89,27 +84,22 @@ class LLMBaseAgent(AgentInterface, ABC):
         return [h.dict() for h in self.history[-5:]]
 
     def build_prompt(self, message: MCPMessage) -> str:
-        template_str = (
-            message.prompt_template
-            or self.default_prompt_template
-            or "{role} | {goal} | {event_count} | {observation} | {history} | {available_tools}"
-        )
-        if isinstance(template_str, PromptTemplate):
-            template = template_str
-        else:
-            template = PromptTemplate.from_template(template_str)
+        template_str = message.prompt_template
+        template = PromptTemplate.from_template(template_str)
         self.logger.debug(f'Final prompt template: {template}') 
-        available_actions = list(self.get_combined_action_set(message))
-        prompt_inputs = dict(self.default_prompt_template_values)
-        prompt_inputs.update({
+        available_actions = list(message.available_actions) or [] 
+        prompt_inputs  = {
             "role": message.role,
             "goal": message.goal,
+            "role_description": message.role_description,
+            "goal_description": message.goal_description,
             "event_count": message.event_count,
             "observation": message.observation,
+            "constraints": message.constraints,
             "history": "\n".join(str(h) for h in message.history or []),
             "available_tools": "\n".join(tool.name for tool in self.tools) or "None",
             "available_actions": json.dumps(available_actions)
-        })
+        }
         self.logger.debug(f"final prompt inputs: {prompt_inputs}")
         return template.format(**prompt_inputs)
 
@@ -122,23 +112,34 @@ class LLMBaseAgent(AgentInterface, ABC):
             raise RuntimeError("Agent not connected")
         prompt = self.build_prompt(message)
         self.logger.debug(f"Prompt to LLM: {prompt}")
-        response = self.llm_client.invoke(self.model_id, prompt)
-        self.logger.debug(f"Response from LLM: {response}")
+        json_response = self.invoke_with_retry(prompt, retries=1, max_tokens=self.max_tokens)
         self.update_history({
             "prompt": prompt,
-            "response": response
-        })
-        return {"response": response}
+            "response": json.dumps(json_response)        })
+        return json_response
 
-    def get_base_actions(self) -> List[str]:
-        return [e.value for e in BaseActions]
+    def invoke_with_retry(self, prompt: str, retries: int = 2, max_tokens: int = 512) -> Dict[str, Any]:
+        for attempt in range(1, 1 + retries + 1):  # First try + `retries` and 1 more for range exclusivity.
+            self.logger.info(f"Attempt {attempt}: invoking LLM with max_tokens={max_tokens}")
+            raw_response = self.llm_client.invoke(self.model_id, prompt, max_tokens=max_tokens)
+            cleaned = self._clean_llm_response(raw_response)
+            if not self._is_json_truncated(cleaned):
+                return json.loads(cleaned)
+            self.logger.warning(f"Attempt {attempt} failed due to truncated JSON")
+            max_tokens *= 2  # Double token limit
+        raise RuntimeError("LLM response was invalid JSON after retries.")
 
-    @abstractmethod
-    def get_agent_specific_actions(self) -> List[str]:
-        pass
-
-    def get_combined_action_set(self, mcp_msg: MCPMessage) -> List[str]:
-        base = self.get_base_actions()
-        specific = self.get_agent_specific_actions()
-        orchestrator = mcp_msg.available_actions or []
-        return sorted(set(base + specific + orchestrator))
+    def _clean_llm_response(self, raw_response: str) -> Optional[str]:
+        # Clean triple backtick-wrapped LLM response
+        cleaned = re.sub(r"^```json|```$", "", raw_response.strip())
+        cleaned = re.sub(r"^```|```$", "", cleaned.strip())
+        return cleaned
+    
+    def _is_json_truncated(self, cleaned_json_str: str) -> bool:
+        # Heuristic: unbalanced braces or ends abruptly
+        try:
+            json.loads(cleaned_json_str)
+            return False
+        except json.JSONDecodeError as e:
+            self.logger.warning(f"Invalid JSON detected: {e}")
+            return True

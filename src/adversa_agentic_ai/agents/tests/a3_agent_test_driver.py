@@ -1,28 +1,30 @@
 import argparse
+from click import Abort
 import requests
-from typing import List
+from typing import List, Dict, Any
 from pydantic import BaseModel
 from adversa_agentic_ai.mcp.mcp_message import MCPMessage
-from adversa_agentic_ai.agents.red.simple_red_agent import RedAgentActions
+from adversa_agentic_ai.prompts.templates.default_template import DEFAULT_PROMPT_TEMPLATE
+from adversa_agentic_ai.prompts.templates import red_agent_template_params as red_params
+from adversa_agentic_ai.agents.actions.base_actions import BaseActions
+from adversa_agentic_ai.agents.actions.red_agent_actions import RedAgentActions
+
 
 # Reuse Prompt classes (used for structured observation)
 class Software(BaseModel):
     name: str
     version: str
 
-
 class Service(BaseModel):
     name: str
     port: int
     software: Software
-
 
 class PromptInput(BaseModel):
     os_name: str
     os_version: str
     services: List[Service]
     user_role: str
-
 
 def build_prompt_input(os_version: str, apache_version: str) -> PromptInput:
     return PromptInput(
@@ -42,7 +44,21 @@ def build_prompt_input(os_version: str, apache_version: str) -> PromptInput:
             )
         ]
     )
-
+def build_MCPMessage(event_count: int, observation: Dict[str, Any]) -> MCPMessage :
+    message = MCPMessage(
+        role=red_params.ROLE,
+        goal=red_params.GOAL,
+        role_description=red_params.ROLE_DESCRIPTION,
+        goal_description=red_params.GOAL_DESCRIPTION,
+        event_count=event_count,
+        observation=observation,
+        prompt_template=DEFAULT_PROMPT_TEMPLATE,
+        available_actions = sorted(set([e.value for e in BaseActions] + [e.value for e in RedAgentActions])),
+        constraints=red_params.CONSTRAINTS,
+        available_tools=["nmap", "port_scan"],
+        history=[]
+    )
+    return message
 
 def main():
     parser = argparse.ArgumentParser(description="Red Agent Test Driver (MCP-compatible)")
@@ -50,17 +66,8 @@ def main():
     # Prompt input args
     parser.add_argument("--os-version", default="20.04", help="Operating system version")
     parser.add_argument("--apache-version", default="2.4.41", help="Apache server version")
-
-    # Agent metadata args
-    parser.add_argument("--goal", default="Find vulnerabilities in the ER system", help="Agent's goal")
+    parser.add_argument("--agent-url", default="http://localhost:8001/aaa/agent/action", help="Agent /aaa/agent/action endpoint")
     parser.add_argument("--role", default="Red", help="Agent role (e.g., Red, Blue, Analyst)")
-    parser.add_argument("--role-description", default="You are a red team agent helping to discover vulnerabilities in a simulated ER system.",
-                        help="Role description for the agent")
-    parser.add_argument("--action-description", default="Respond with your next best red-team action.",
-                        help="Description of what the agent should output")
-    parser.add_argument("--prompt-template", help="Custom Jinja-style prompt template to override default")
-
-    parser.add_argument("--agent-url", default="http://localhost:8000/agent/act", help="Agent /act endpoint")
     args = parser.parse_args()
 
     # Build observation using the structured model
@@ -68,31 +75,13 @@ def main():
     observation = prompt_input.model_dump()
 
     # Build constraints (can be extended later)
-    constraints = {
-        "must_not_touch": ["emergency_dispatch_server"],
-        "time_limit": "10 steps"
-    }
+    
 
-    # List of available red-team actions from the enum
-    # This needs to be revisited. We should add new actions that is not in
-    # the RedAgentActions
-    available_actions = [action.value for action in RedAgentActions]
-
-    # Construct MCPMessage
-    message = MCPMessage(
-        role=args.role,
-        goal=args.goal,
-        event_count=1,
-        role_description=args.role_description,
-        action_description=args.action_description,
-        prompt_template=args.prompt_template if args.prompt_template else None,
-        observation=observation,
-        constraints=constraints,
-        available_actions=available_actions
-    )
+    message = build_MCPMessage(1, observation)
 
     # Send to agent
     try:
+        print(f"Sending MCPMessage to Agent: {message}")
         response = requests.post(args.agent_url, json=message.model_dump())
         response.raise_for_status()
         print("Agent Response:")

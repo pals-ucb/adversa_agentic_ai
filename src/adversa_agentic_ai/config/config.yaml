@@ -47,9 +47,11 @@ agents:
     host: 0.0.0.0
     provider: aws
     platform: bedrock
+    max_tokens: 1024
   - name: red_agent_cohere
     model_id: cohere.command-r-plus-v1:0 
     port: 8001
     host: 0.0.0.0
     provider: aws
     platform: bedrock
+    max_tokens: 1024
