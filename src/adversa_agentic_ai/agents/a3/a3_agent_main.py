@@ -8,8 +8,8 @@ from adversa_agentic_ai.utils.config_logger import set_current_agent
 #from adversa_agentic_ai.config.config_manager import get_config_manager
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run SimpleRedAgent")
-    parser.add_argument("--agent_name", required=True, help="Name of the agent config")
+    parser = argparse.ArgumentParser(description="Launch A3 Agent")
+    parser.add_argument("--agent_name", required=True, help="Name of the agent in the config file.")
     return parser.parse_args()
 
 def launch_uvicorn(args: argparse, config_manager: object, logger: object) -> None:
@@ -30,7 +30,7 @@ def launch_uvicorn(args: argparse, config_manager: object, logger: object) -> No
     logger.info(f"Starting Red Agent: {app_name} on {host}:{port}")
     
     uvicorn.run(
-        "adversa_agentic_ai.agents.red.simple_red_agent:agent_factory",
+        "adversa_agentic_ai.agents.a3.a3_agent:agent_factory",
         host=host,
         port=port,
         reload=True,

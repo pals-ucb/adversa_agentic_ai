@@ -1,4 +1,4 @@
-# File: simple_red_agent.py
+# File: a3_agent.py
 # Implements the SimpleRedAgent class as an ASGI app factory
 
 ## Need to setup logger first thing so that
@@ -13,36 +13,19 @@ agent_name = os.environ.get("AGENT_NAME", "red_agent")
 set_current_agent(agent_name)
 setup_logger(agent_name, level=logging.DEBUG)
 
-
+import json
 from fastapi import FastAPI, HTTPException
 from typing import List
 from adversa_agentic_ai.agents.base.llm_base_agent import LLMBaseAgent
 from adversa_agentic_ai.mcp.mcp_message import MCPMessage
 from adversa_agentic_ai.config.config_manager import get_config_manager
-from adversa_agentic_ai.prompts.templates.red_agent.default import (
-    DEFAULT_ACTION_DESCRIPTION,
-    DEFAULT_EVENT_COUNT,
-    DEFAULT_ROLE,
-    DEFAULT_ROLE_DESCRIPTION,
-    DEFAULT_RED_PROMPT_TEMPLATE,
-    DEFAULT_CONSTRAINTS
-)
-from adversa_agentic_ai.prompts.responses.red_llm.response import RedLlmResponse
+from adversa_agentic_ai.schemas.llm import parse_and_validate_llm_response
 
 logger = get_agent_logger()
 
-class RedAgentActions(str, Enum):
-    BRUTE_FORCE_SSH = "brute_force_ssh"
-    SQL_INJECTION = "sql_injection"
-    EXPLOIT_KNOWN_CVE = "exploit_known_cve"
-    CUSTOM_PAYLOAD_UPLOAD = "custom_payload_upload"
-    ENUMERATE_USER_ROLES = "enumerate_user_roles"
-    FINGERPRINT_WEBSERVER = "fingerprint_webserver"
-
-
-class SimpleRedAgent(LLMBaseAgent):
+class A3Agent(LLMBaseAgent):
     def __init__(self, agent_name: str):
-        logger.info(f"Initializing Red Agent with name: {agent_name}")
+        logger.info(f"Initializing A3 Agent with name: {agent_name}")
         config_manager = get_config_manager()
         agent_cfg = config_manager.get_agent_by_name(agent_name)
         if not agent_cfg:
@@ -50,32 +33,20 @@ class SimpleRedAgent(LLMBaseAgent):
             raise Exception(f"Agent name '{agent_name}' not found in configuration.")
 
         model_id = agent_cfg.get("model_id")
-        host = agent_cfg.get("host")
-        port = agent_cfg.get("port")
         provider = agent_cfg.get("provider")
         platform = agent_cfg.get("platform")
-
-        for field in ("model_id", "host", "port"):
+        max_tokens = agent_cfg.get("max_token", 512)
+        for field in ("model_id", "provider", "platform"):
             if not agent_cfg.get(field):
                 logger.error(f"Missing '{field}' for agent: {agent_name}")
                 raise Exception(f"'{field}' not configured for agent '{agent_name}'")
 
-        logger.info(f"Red Agent '{agent_name}' configured with model '{model_id}' at {host}:{port}")
-
-        defaults = {
-            "action_description": DEFAULT_ACTION_DESCRIPTION,
-            "event_count": DEFAULT_EVENT_COUNT,
-            "role": DEFAULT_ROLE,
-            "role_description": DEFAULT_ROLE_DESCRIPTION,
-            "constraints": DEFAULT_CONSTRAINTS
-        }
-
+        logger.info(f"A3 Agent '{agent_name}' configured with model '{model_id}' provider: {provider} platform: {platform}")
         super().__init__(
             model_id=model_id,
             provider=provider,
             platform=platform,
-            default_prompt_template=DEFAULT_RED_PROMPT_TEMPLATE,
-            default_prompt_template_values=defaults,
+            max_tokens=max_tokens
         )
 
     '''def build_prompt(self, context: str) -> str:
@@ -86,23 +57,19 @@ class SimpleRedAgent(LLMBaseAgent):
 
     def register_routes(self, app: FastAPI):
         """Attach FastAPI routes to the given app instance."""
-        @app.post("/agent/act")
-        def agent_act(message: MCPMessage):
-            logger.info(f"/agent/act: MCPMessage: {message}")
-            r = self.invoke(message=message)
-            # Strip markdown code fence if present
-            cleaned = re.sub(r"^```json\\n|\\n```$", "", r['response'].strip())
-            # Optional safety: strip triple backticks even without `json` label
-            cleaned = re.sub(r"^```|```$", "", cleaned.strip())
-            llm_response = RedLlmResponse.parse_raw(cleaned)   
-            logger.info(f"response got: {llm_response}")
-            return {"response": llm_response}
+        @app.post("/aaa/agent/action")
+        def agent_action(message: MCPMessage):
+            logger.info(f"/aaa/agent/action: MCPMessage: {message}")
+            response = self.invoke(message=message)
+            llm_actions = parse_and_validate_llm_response(response) 
+            logger.info(f"response got: {llm_actions}")
+            return {"response": llm_actions}
 
-        @app.get("/agent/history")
+        @app.get("/aaa/agent/history")
         def get_history():
             return self.get_history()
 
-        @app.delete("/agent/history")
+        @app.delete("/aaa/agent/history")
         def clear_history():
             self.history.clear()
             return {"message": "History cleared."}
@@ -114,9 +81,5 @@ class SimpleRedAgent(LLMBaseAgent):
             self.register_routes(self.app)
         await self.app(scope, receive, send)
 
-    def get_agent_specific_actions(self) -> List[str]:
-        return [e.value for e in RedAgentActions]
-
-
-def agent_factory() -> SimpleRedAgent:
-    return SimpleRedAgent(agent_name)
+def agent_factory() -> A3Agent:
+    return A3Agent(agent_name)
