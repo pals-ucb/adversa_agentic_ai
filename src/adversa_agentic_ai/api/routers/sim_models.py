@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, status
 from typing import List
 from adversa_agentic_ai.utils.config_logger import get_agent_logger
+from adversa_agentic_ai.api.schemas.schema_validator import validate_sim_model
 from ..schemas.sim_models import SimModel
 from ..stores.sim_model_store import SimModelStore
 from botocore.exceptions import ClientError
@@ -25,6 +26,11 @@ def create_sim_model(model: SimModel, background_tasks: BackgroundTasks):
     logger.info(f'SimModel: create {model}')
     if sim_model_db.get(model.id):
         raise HTTPException(status_code=400, detail="Model already exists")
+    try:
+        # Validate before saving
+        validate_sim_model(model)  # throws if invalid
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=f"Model validation failed: {e}")
     return sim_model_db.save(model, background_tasks)
 
 @router.get(

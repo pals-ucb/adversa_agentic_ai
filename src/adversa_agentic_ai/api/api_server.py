@@ -17,12 +17,13 @@ from fastapi.middleware.cors import CORSMiddleware
 import time
 
 # Routers
-from .routers.agents import router as agents_router
-from .routers.providers import router as providers_router
-from .routers.prompt_templates import router as prompt_templates_router
-from .routers.sim_models import router as sim_models_router
-from .routers.sim import router as sim_runtime_router
-from .config_api import router as config_router
+
+from adversa_agentic_ai.api.routers.agents import router as agents_router
+from adversa_agentic_ai.api.routers.providers import router as providers_router
+from adversa_agentic_ai.api.routers.prompt_templates import router as prompt_templates_router
+from adversa_agentic_ai.api.routers.sim_models import router as sim_models_router
+from adversa_agentic_ai.api.routers.sim import router as sim_runtime_router
+from adversa_agentic_ai.api.config_api import router as config_router
 
 stage = os.getenv("STAGE", "Prod")           # or hard-code "Prod"
 app = FastAPI(
@@ -31,7 +32,7 @@ app = FastAPI(
     openapi_url="/openapi.json",              # still the same path, but prefixed
     docs_url="/docs",
     redoc_url="/redoc",
-    version="0.1.0",
+    version="0.2.0",
     description="""
 API for managing simulation models (`SimModel`), PromptTemplates, Agents(Red/Blue), Providers and LLM Selections.
 The API also allows running Simulations using the /aaa/sim APIs.
