@@ -48,7 +48,10 @@ class Vulnerability(BaseModel):
     subtype: VulnerabilitySubtype = Field(..., description="Detailed type (CBSim compatible)")
     description: str = Field(..., description="Detailed explanation of the vulnerability")
     vclass: VulnerabilityClass = Field(..., description="Vulnerability classification level identify if this vulnerability was discovered by the LLM.")
-    outcome: str = Field(..., description="Expected effect if exploited (e.g., access granted, DoS)")
+    outcome: Optional[Any] = Field(
+        None, 
+        description="Runtime outcome of the vulnerability. Optional in authoring mode; constructed from outcome_type and outcome_params."
+    )
     cost: float = Field(default=1.0, description="Cost to exploit this vulnerability")
     granted_access: str = Field(default="user", description="Access level granted upon successful exploitation")
     prereq: Optional[List[str]] = Field(default_factory=list, description="Credentials required before exploitation")

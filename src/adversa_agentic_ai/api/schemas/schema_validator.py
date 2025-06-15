@@ -1,5 +1,5 @@
 import logging
-from adversa_agentic_ai.models import SimModel
+from adversa_agentic_ai.api.schemas.sim_models import SimModel
 from adversa_agentic_ai.utils.config_logger import get_agent_logger
 
 logger = get_agent_logger()

@@ -1,0 +1,129 @@
+#!/usr/bin/env python
+import argparse
+import json
+import requests
+import sys
+from pathlib import Path
+
+
+def create_model(api_endpoint: str, input_json_file: str):
+    input_path = Path(input_json_file)
+    if not input_path.exists():
+        print(f"❌ Error: Input file '{input_json_file}' does not exist.")
+        sys.exit(1)
+
+    try:
+        with open(input_path, "r") as f:
+            model_data = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"❌ Error decoding JSON: {e}")
+        sys.exit(1)
+
+    url = f"{api_endpoint.rstrip('/')}/aaa/sim/models"
+    try:
+        response = requests.post(url, json=model_data)
+        response.raise_for_status()
+        result = response.json()
+        print(result["id"])
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error calling API: {e}")
+        if e.response is not None:
+            print("Response:", e.response.text)
+        sys.exit(1)
+
+
+def get_model(api_endpoint: str, model_id: str):
+    url = f"{api_endpoint.rstrip('/')}/aaa/sim/models/{model_id}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        result = response.json()
+        print(json.dumps(result, indent=2))
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error retrieving model '{model_id}': {e}")
+        if e.response is not None:
+            print("Response:", e.response.text)
+        sys.exit(1)
+
+
+def update_model(api_endpoint: str, model_id: str, input_json_file: str):
+    input_path = Path(input_json_file)
+    if not input_path.exists():
+        print(f"❌ Error: Input file '{input_json_file}' does not exist.")
+        sys.exit(1)
+
+    try:
+        with open(input_path, "r") as f:
+            model_data = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"❌ Error decoding JSON: {e}")
+        sys.exit(1)
+
+    url = f"{api_endpoint.rstrip('/')}/aaa/sim/models/{model_id}"
+    try:
+        response = requests.put(url, json=model_data)
+        response.raise_for_status()
+        result = response.json()
+        print(result["id"])
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error updating model '{model_id}': {e}")
+        if e.response is not None:
+            print("Response:", e.response.text)
+        sys.exit(1)
+
+
+def delete_model(api_endpoint: str, model_id: str):
+    url = f"{api_endpoint.rstrip('/')}/aaa/sim/models/{model_id}"
+    try:
+        response = requests.delete(url)
+        response.raise_for_status()
+        print(model_id)
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error deleting model '{model_id}': {e}")
+        if e.response is not None:
+            print("Response:", e.response.text)
+        sys.exit(1)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="adversa",
+        description="Adversa CLI Tool for managing simulation models"
+    )
+    parser.add_argument("--api-endpoint", required=True, help="Base URL of the REST API")
+
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # create-model
+    create = subparsers.add_parser("create-model", help="Create a new model")
+    create.add_argument("--input-json-file", required=True, help="Path to input JSON file")
+
+    # get-model
+    get = subparsers.add_parser("get-model", help="Retrieve an existing model")
+    get.add_argument("--model-id", required=True, help="ID of the model to retrieve")
+
+    # update-model
+    update = subparsers.add_parser("update-model", help="Update an existing model")
+    update.add_argument("--model-id", required=True, help="ID of the model to update")
+    update.add_argument("--input-json-file", required=True, help="Updated input JSON file")
+
+    # delete-model
+    delete = subparsers.add_parser("delete-model", help="Delete an existing model")
+    delete.add_argument("--model-id", required=True, help="ID of the model to delete")
+
+    args = parser.parse_args()
+
+    if args.command == "create-model":
+        create_model(args.api_endpoint, args.input_json_file)
+    elif args.command == "get-model":
+        get_model(args.api_endpoint, args.model_id)
+    elif args.command == "update-model":
+        update_model(args.api_endpoint, args.model_id, args.input_json_file)
+    elif args.command == "delete-model":
+        delete_model(args.api_endpoint, args.model_id)
+    else:
+        parser.print_help()
+
+
+if __name__ == "__main__":
+    main()

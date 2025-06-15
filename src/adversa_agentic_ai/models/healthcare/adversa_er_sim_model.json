@@ -30,7 +30,7 @@
               {
                 "node": "CheckInStation",
                 "port": "HTTPS",
-                "credential": "checkin-user-creds"
+                "credential": "ubuntu:ubuntu123$"
               }
             ]
           },
@@ -67,7 +67,7 @@
               {
                 "node": "CheckInStation",
                 "port": "HTTPS",
-                "credential": "checkin-user-creds"
+                "credential": "admin:healthcare123"
               }
             ]
           },
@@ -106,7 +106,7 @@
               {
                 "node": "CheckInStation",
                 "port": "HTTPS",
-                "credential": "checkin-user-creds"
+                "credential": "doctor:password123"
               }
             ]
           },
@@ -148,7 +148,7 @@
           "vclass": "configured",
           "description": "Public API exposed sensitive data",
           "outcome_type": "CustomerData",
-          "outcome_params": {},
+          "outcome_params": {"fields": ["ssn", "dob", "name"], "record_count": 500 },
           "cost": 2.0,
           "granted_access": "user",
           "prereq": []
@@ -188,7 +188,7 @@
           "vclass": "configured",
           "description": "Public API exposed sensitive data",
           "outcome_type": "CustomerData",
-          "outcome_params": {},
+          "outcome_params": {"name": "john", "dob": "04/23/2001"},
           "cost": 2.0,
           "granted_access": "user",
           "prereq": []
@@ -224,7 +224,7 @@
           "vclass": "configured",
           "description": "Public API exposed sensitive data",
           "outcome_type": "CustomerData",
-          "outcome_params": {},
+          "outcome_params": {"name": "Ann", "dob": "12/01/1994", "condition": "cancer"},
           "cost": 2.0,
           "granted_access": "user",
           "prereq": []
@@ -256,7 +256,7 @@
           "vclass": "configured",
           "description": "Public API exposed sensitive data",
           "outcome_type": "CustomerData",
-          "outcome_params": {},
+          "outcome_params": {"medication": "none"},
           "cost": 2.0,
           "granted_access": "user",
           "prereq": []
@@ -292,7 +292,7 @@
           "vclass": "configured",
           "description": "Public API exposed sensitive data",
           "outcome_type": "CustomerData",
-          "outcome_params": {},
+          "outcome_params": {"name": "Ann", "ssn": "342:78:7873"},
           "cost": 2.0,
           "granted_access": "user",
           "prereq": []
