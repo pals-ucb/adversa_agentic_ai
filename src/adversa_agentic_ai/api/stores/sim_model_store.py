@@ -17,6 +17,14 @@ class SimModelStore:
         BUCKET = os.getenv("DATA_BUCKET", "adversa-agentic-ai-data")
         PREFIX = os.getenv("SIM_MODELS_PREFIX", "sim_models")
         self._s3store = S3Store[SimModel](bucket=BUCKET, prefix=PREFIX, model_cls=SimModel)
+        self.bucket_name = BUCKET
+        self.bucket_prefix = PREFIX
+
+    def get_bucket_name(self):
+        return self.bucket_name
+    
+    def get_bucket_prefix(self):
+        return self.bucket_prefix
 
     def save(self, model: SimModel, background_tasks: BackgroundTasks) -> SimModel:
         self._store[model.id] = model

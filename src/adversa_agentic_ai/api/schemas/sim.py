@@ -1,15 +1,20 @@
+from re import L
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 from enum import Enum
 
 class SimStatus(str, Enum):
-    NOT_STARTED = "not_started"   # Simulation created but not yet run
-    RUNNING = "running"           # Simulation is currently in progress
-    COMPLETED = "completed"       # Simulation has completed successfully
-    ERROR = "error"               # Simulation terminated due to an error
+    Loaded = "Loaded"
+    LoadFailed = "LoadFailed"
+    Running = "Running"
+    RunFailed = "RunFailed"
+    StepFailed = "StepFailed"
+    Paused = "Paused"
+    Finished = "Finished"
+    Unloaded = "Unloaded"
 
 class SimRequest(BaseModel):
-    sim_model_id: str = Field(..., description="ID of the SimModel to run")
+    model_id: str = Field(..., description="ID of the SimModel to run")
     step_mode: bool = Field(False, description="Whether to run in step-by-step mode (`True`) or full run (`False`)")
 
 class SimResponse(BaseModel):

@@ -1,5 +1,9 @@
+from ast import Pass
+import os
 from fastapi import APIRouter, HTTPException
 from uuid import UUID
+
+from networkx import load_centrality
 from ..schemas.sim import (
     SimRequest,
     SimResponse,
@@ -9,7 +13,11 @@ from ..schemas.sim import (
     SimStepDetail
 )
 from ..stores.sim_model_store import SimModelStore
-from ..stores.sim_store import SimStore
+from ..schemas.internal.orchestrator_schemas import (
+    LoadModelRequest,
+    LoadModelResponse
+)
+from adversa_agentic_ai.api.clients.orchestrator_client import OrchestrationClient
 
 router = APIRouter(
     prefix="/sim",
@@ -18,7 +26,7 @@ router = APIRouter(
 )
 
 sim_model_db = SimModelStore()
-sim_runner_store = SimStore()
+orchestrator_client = OrchestrationClient()
 
 @router.post(
     "/model/load",
@@ -27,11 +35,15 @@ sim_runner_store = SimStore()
     description="Loads a SimModel into memory and prepares it for execution. Optionally enables step-by-step mode."
 )
 def load_sim_model(request: SimRequest):
-    sim_model = sim_model_db.get(request.sim_model_id)
+    sim_model = sim_model_db.get(request.model_id)
     if not sim_model:
         raise HTTPException(status_code=404, detail="SimModel not found")
-    sim_id = sim_runner_store.load_sim_model(sim_model, step_mode=request.step_mode)
-    return SimResponse(sim_id=sim_id, status="running")
+    load_req = LoadModelRequest(s3_bucket=sim_model_db.get_bucket_name(), 
+                           s3_path=sim_model_db.get_bucket_prefix(),
+                           model_id=request.model_id
+                           )
+    resp = orchestrator_client.load_model(load_req)
+    return SimResponse(sim_id=resp.sim_id, status=resp.status)
 
 @router.post(
     "/run",
@@ -43,7 +55,7 @@ def run_simulation(request: SimRequest):
     sim_model = sim_model_db.get(request.sim_model_id)
     if not sim_model:
         raise HTTPException(status_code=404, detail="SimModel not found")
-    sim_id = sim_runner_store.run_simulation(sim_model)
+    sim_id = None
     return SimResponse(sim_id=sim_id, status="completed")
 
 @router.post(
@@ -53,10 +65,7 @@ def run_simulation(request: SimRequest):
     description="Executes a single step in the step-by-step simulation mode."
 )
 def step_simulation(request: SimStepRequest):
-    result = sim_runner_store.step_simulation(request.sim_id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Simulation step failed or not found")
-    return result
+    Pass
 
 @router.get(
     "/status/{sim_id}",
@@ -65,7 +74,7 @@ def step_simulation(request: SimStepRequest):
     description="Returns the current status (e.g., running, completed, error) of the simulation."
 )
 def get_simulation_status(sim_id: UUID):
-    status = sim_runner_store.get_status(sim_id)
+    status = None
     if not status:
         raise HTTPException(status_code=404, detail="Simulation not found")
     return status
@@ -77,7 +86,7 @@ def get_simulation_status(sim_id: UUID):
     description="Retrieves details from the most recent simulation step."
 )
 def get_simulation_detail(sim_id: UUID):
-    detail = sim_runner_store.get_latest_step_detail(sim_id)
+    detail = None
     if not detail:
         raise HTTPException(status_code=404, detail="Detail not found")
     return detail
@@ -89,7 +98,7 @@ def get_simulation_detail(sim_id: UUID):
     description="Returns information about a specific simulation step based on the index provided."
 )
 def get_simulation_step_detail(sim_id: UUID, step_index: int):
-    detail = sim_runner_store.get_step_detail(sim_id, step_index)
+    detail = None
     if not detail:
         raise HTTPException(status_code=404, detail="Step detail not found")
     return detail

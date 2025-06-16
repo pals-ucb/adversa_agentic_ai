@@ -41,17 +41,25 @@ logging:
   format: "[%(asctime)s] %(levelname)s: %(message)s"
 
 agents:
-  - name: red_agent
+  - name: blue_agent
     model_id: anthropic.claude-instant-v1 
     port: 8000
     host: 0.0.0.0
     provider: aws
     platform: bedrock
     max_tokens: 1024
-  - name: red_agent_cohere
+  - name: red_agent
     model_id: cohere.command-r-plus-v1:0 
     port: 8001
     host: 0.0.0.0
     provider: aws
     platform: bedrock
     max_tokens: 1024
+  - name: a3_orchestrator
+    model_id: cohere.command-r-plus-v1:0 
+    port: 8002
+    host: 0.0.0.0
+    provider: aws
+    platform: bedrock
+    max_tokens: 1024
+

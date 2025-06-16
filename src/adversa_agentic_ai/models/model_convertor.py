@@ -1,9 +1,13 @@
+
 import agentic_cbsim.cyberbattle.simulation.model as m
 from agentic_cbsim.cyberbattle._env.cyberbattle_env import CyberBattleEnv
-from adversa_agentic_ai.models import SimModel, Node, Vulnerability
+from agentic_cbsim.cyberbattle.simulation.model import (
+    CustomerData, LateralMove, PrivilegeEscalation, AdminEscalation, SystemEscalation,
+    ProbeSucceeded, ProbeFailed, ExploitFailed, LeakedCredentials, LeakedNodesId,
+    CachedCredential, PrivilegeLevel)
+from adversa_agentic_ai.api.schemas.sim_models import SimModel, Node, Vulnerability, OutcomeType
 from adversa_agentic_ai.models.model_interface import ModelInterface
 from adversa_agentic_ai.utils.config_logger import get_agent_logger
-
 from typing import Dict, List, Any
 
 logger = get_agent_logger()
@@ -57,22 +61,59 @@ class ConvertedSimModel(ModelInterface):
         )
         logger.info(f"Conversion to CBSim Model succeeded: {model.name}")
 
+    def create_vulnerability_outcome(self, outcome_type: OutcomeType, **kwargs) -> m.VulnerabilityOutcome:
+        match outcome_type:
+            case OutcomeType.CustomerData:
+                return CustomerData()
+
+            case OutcomeType.LateralMove:
+                # Expected: success: bool
+                return LateralMove(success=kwargs.get("success", True))
+
+            case OutcomeType.PrivilegeEscalation:
+                # Expected: level: PrivilegeLevel
+                return PrivilegeEscalation(level=kwargs["level"])
+
+            case OutcomeType.AdminEscalation:
+                return AdminEscalation()
+
+            case OutcomeType.SystemEscalation:
+                return SystemEscalation()
+
+            case OutcomeType.ProbeSucceeded:
+                # Expected: discovered_properties: List[str]
+                return ProbeSucceeded(discovered_properties=kwargs["discovered_properties"])
+
+            case OutcomeType.ProbeFailed:
+                return ProbeFailed()
+
+            case OutcomeType.ExploitFailed:
+                return ExploitFailed()
+
+            case OutcomeType.LeakedCredentials:
+                # Expected: credentials: List[CachedCredential]
+                return LeakedCredentials(credentials=kwargs["credentials"])
+
+            case OutcomeType.LeakedNodesId:
+                # Expected: nodes: List[str]
+                return LeakedNodesId(nodes=kwargs["nodes"])
+
+            case _:
+                raise ValueError(f"Unsupported OutcomeType: {outcome_type}")
 
     def _convert_vuln(self, vuln: Vulnerability) -> m.VulnerabilityInfo:
-        outcome_class = self._resolve_outcome_class(vuln.outcome_type)
         try:
-            outcome = outcome_class(**vuln.outcome_params)
+            outcome = self.create_vulnerability_outcome(vuln.outcome_type, vuln.outcome_params)
         except Exception as e:
-            raise ValueError(f"Invalid outcome_params for {vuln.id}: {e}")
+            logger.error(f"Invalid outcome_params for {vuln.id}: {e}")
+            outcome = ExploitFailed()
 
         return m.VulnerabilityInfo(
             description=vuln.description,
-            type=m.VulnerabilityType.REMOTE,  # MVP assumption
+            type=m.VulnerabilityType.REMOTE,
             outcome=outcome,
             reward_string=vuln.description,
-            cost=vuln.cost,
-            prereq=vuln.prereq,
-            granted_access=vuln.granted_access
+            cost=vuln.cost
         )
 
     def _convert_node(self, node: Node) -> m.NodeInfo:
@@ -117,7 +158,7 @@ class ConvertedSimModel(ModelInterface):
         return mapping[outcome_type]
 
     # -- ModelInterface required methods --
-    def get_env(self) -> CyberBattleEnv:
+    def get_env(self):
         return self.env
 
     def get_model(self):

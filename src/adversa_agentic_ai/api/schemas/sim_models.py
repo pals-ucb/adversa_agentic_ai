@@ -1,8 +1,11 @@
 # File: src/api/routers/sim_models.py
 from fastapi import APIRouter
-from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Any
+from pydantic import BaseModel, Field, field_validator
+from typing import Dict, List, Optional, Any, Annotated
 from enum import Enum
+from uuid import UUID, uuid4
+
+
 
 router = APIRouter()
 
@@ -29,18 +32,16 @@ class VulnerabilitySubtype(str, Enum):  # 1:1 mapping with CBSim types
     PhysicalAttack = "PhysicalAttack"
 
 class OutcomeType(str, Enum):
-    """
-    Enumerates the types of outcomes a vulnerability can cause in CyberBattleSim.
-    These are mapped to concrete classes like PrivilegeEscalation, LeakedCredentials, etc.
-    """
-    privilege_escalation = "PrivilegeEscalation"
-    leaked_credentials = "LeakedCredentials"
-    leaked_nodes = "LeakedNodesId"
-    customer_data = "CustomerData"
-    lateral_move = "LateralMove"
-    probe_succeeded = "ProbeSucceeded"
-    probe_failed = "ProbeFailed"
-    exploit_failed = "ExploitFailed"
+    CustomerData = "CustomerData" 
+    LateralMove = "LateralMove" 
+    Privilege = "Privilege" 
+    Admin = "Admin"
+    System = "System"
+    ProbeSucceeded = "ProbeSucceeded" 
+    ProbeFailed = "ProbeFailed" 
+    ExploitFailed = "ExploitFailed" 
+    LeakedCredentials = "LeakedCredentials" 
+    LeakedNodes = "LeakedNodes"
 
 class Vulnerability(BaseModel):
     id: str = Field(..., description="Unique identifier for this vulnerability")
@@ -97,9 +98,14 @@ class Node(BaseModel):
     value: Optional[float] = Field(default=1.0, description="Reward value if this node is successfully compromised")
     credentials: Optional[List[str]] = Field(default_factory=list, description="List of credentials that work on this node")
 
-
 class SimModel(BaseModel):
-    id: str = Field(..., description="Unique simulation model ID")
+    id: Optional[UUID] = Field(default_factory=uuid4, description="UUIDv4 ID, optional — generated if not provided")
     name: str = Field(..., description="Human-readable name for the simulation model")
     description: Optional[str] = Field(None, description="Optional high-level description of the simulation environment")
     nodes: List[Node] = Field(..., description="List of all nodes that compose the simulation environment")
+
+    @field_validator("id")
+    def validate_uuid4(cls, v):
+        if v and v.version != 4:
+            raise ValueError("Only UUID version 4 is allowed")
+        return v

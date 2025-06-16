@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 import argparse
 import json
+from re import S
+from matplotlib.container import StemContainer
 import requests
 import sys
 from pathlib import Path
-
+from adversa_agentic_ai.api.schemas.sim import SimRequest
 
 def create_model(api_endpoint: str, input_json_file: str):
     input_path = Path(input_json_file)
@@ -84,6 +86,21 @@ def delete_model(api_endpoint: str, model_id: str):
             print("Response:", e.response.text)
         sys.exit(1)
 
+def load_model(api_endpoint: str, model_id: str):
+    url = f"{api_endpoint.rstrip('/')}/aaa/sim/model/load"
+    sim_req = SimRequest(model_id=model_id, Step_mode=True)
+    try:
+        response = requests.post(url, json=sim_req.model_dump())
+        response.raise_for_status()
+        result = response.json()
+        print(result)
+        print(result["sim_id"], result["status"])
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error calling API: {e}")
+        if e.response is not None:
+            print("Response:", e.response.text)
+        sys.exit(1)
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -111,6 +128,11 @@ def main():
     delete = subparsers.add_parser("delete-model", help="Delete an existing model")
     delete.add_argument("--model-id", required=True, help="ID of the model to delete")
 
+        # load-model subcommand
+    load_parser = subparsers.add_parser("load-model", help="Load a simulation model into the environment")
+    load_parser.add_argument("--model-id", required=True, help="Model ID to load")
+
+
     args = parser.parse_args()
 
     if args.command == "create-model":
@@ -121,9 +143,10 @@ def main():
         update_model(args.api_endpoint, args.model_id, args.input_json_file)
     elif args.command == "delete-model":
         delete_model(args.api_endpoint, args.model_id)
+    elif args.command == "load-model":
+        load_model(api_endpoint=args.api_endpoint, model_id=args.model_id)
     else:
         parser.print_help()
-
 
 if __name__ == "__main__":
     main()
