@@ -2,13 +2,14 @@ from ast import Pass
 import os
 from fastapi import APIRouter, HTTPException
 from uuid import UUID
-
+import requests
+from httpx import get
 from networkx import load_centrality
 from ..schemas.sim import (
+    SimModelLoadRequest,
+    SimModelLoadResponse,
     SimRequest,
     SimResponse,
-    SimStepRequest,
-    SimStepResponse,
     SimStatus,
     SimStepDetail
 )
@@ -17,7 +18,10 @@ from ..schemas.internal.orchestrator_schemas import (
     LoadModelRequest,
     LoadModelResponse
 )
+from adversa_agentic_ai.utils.config_logger import get_agent_logger
 from adversa_agentic_ai.api.clients.orchestrator_client import OrchestrationClient
+
+logger = get_agent_logger()
 
 router = APIRouter(
     prefix="/sim",
@@ -30,43 +34,50 @@ orchestrator_client = OrchestrationClient()
 
 @router.post(
     "/model/load",
-    response_model=SimResponse,
-    summary="Load a simulation model",
-    description="Loads a SimModel into memory and prepares it for execution. Optionally enables step-by-step mode."
+    response_model=SimModelLoadResponse,
+    summary="Load an adversa  model into memory and prepare for simulation",
+    description="Loads an Adversa Model into memory and prepares it for execution. Optionally enables step-by-step mode."
 )
-def load_sim_model(request: SimRequest):
+def load_sim_model(request: SimModelLoadRequest):
     sim_model = sim_model_db.get(request.model_id)
     if not sim_model:
         raise HTTPException(status_code=404, detail="SimModel not found")
-    load_req = LoadModelRequest(s3_bucket=sim_model_db.get_bucket_name(), 
-                           s3_path=sim_model_db.get_bucket_prefix(),
-                           model_id=request.model_id
-                           )
-    resp = orchestrator_client.load_model(load_req)
-    return SimResponse(sim_id=resp.sim_id, status=resp.status)
-
+    try:
+        load_req = LoadModelRequest(s3_bucket=sim_model_db.get_bucket_name(), 
+                                    s3_path=sim_model_db.get_bucket_prefix(),
+                                    model_id=request.model_id)
+        resp = orchestrator_client.load_model(load_req)
+        return SimModelLoadResponse(**resp.model_dump())
+    except requests.HTTPError as e:
+        logger.exception(f"Orchestrator HTTP error during model loading: {request.model_id}")
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=e.response.json().get("detail", e.response.text)
+        )
+    except Exception as e:
+        logger.exception(f"Unexpected error during Model load: {request.model_id}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+    
 @router.post(
     "/run",
     response_model=SimResponse,
-    summary="Run simulation to completion",
-    description="Executes the loaded SimModel simulation until it reaches a terminal state."
+    summary="Run simulation to completion or one step at a time based on the mode",
+    description="Executes the loaded SimModel simulation until it reaches a terminal state or just the next step."
 )
-def run_simulation(request: SimRequest):
-    sim_model = sim_model_db.get(request.sim_model_id)
-    if not sim_model:
-        raise HTTPException(status_code=404, detail="SimModel not found")
-    sim_id = None
-    return SimResponse(sim_id=sim_id, status="completed")
-
-@router.post(
-    "/step",
-    response_model=SimStepResponse,
-    summary="Run a single simulation step",
-    description="Executes a single step in the step-by-step simulation mode."
-)
-def step_simulation(request: SimStepRequest):
-    Pass
-
+def run_simulation(runSimRequest: SimRequest):
+    try:
+        resp = orchestrator_client.run_sim(runSimRequest)
+        return SimResponse(**resp.model_dump()) 
+    except requests.HTTPError as e:
+        logger.exception(f"Orchestrator HTTP error during sim run: {runSimRequest.sim_id}")
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=e.response.json().get("detail", e.response.text)
+        )
+    except Exception as e:
+        logger.exception(f"Unexpected error during sim run: {runSimRequest.sim_id}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+    
 @router.get(
     "/status/{sim_id}",
     response_model=SimStatus,

@@ -5,6 +5,7 @@
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel
 import json
+from adversa_agentic_ai.api.schemas.sim import Observation
 
 class MCPMessage(BaseModel):
     role: str                                  # Agent role, e.g., "Planner", "Red", "Blue", "Inspector"
@@ -12,7 +13,7 @@ class MCPMessage(BaseModel):
     goal: str
     goal_description: str
     event_count: int
-    observation: Dict[str, Any]
+    observation: Observation 
     prompt_template: str    
     available_actions: List[str] = None  # Optional list of actions 
     history: Optional[List[Dict[str, Any]]] = []  # [{"action": ..., "input": ..., "result": ..., "reward": ...}]

@@ -1,12 +1,16 @@
 #!/usr/bin/env python
 import argparse
 import json
-from re import S
-from matplotlib.container import StemContainer
+from pandas import Timestamp
 import requests
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
-from adversa_agentic_ai.api.schemas.sim import SimRequest
+from adversa_agentic_ai.api.schemas.sim import (
+    SimModelLoadRequest, 
+    SimModelLoadResponse,
+    SimRequest,
+    SimResponse)
 
 def create_model(api_endpoint: str, input_json_file: str):
     input_path = Path(input_json_file)
@@ -88,18 +92,30 @@ def delete_model(api_endpoint: str, model_id: str):
 
 def load_model(api_endpoint: str, model_id: str):
     url = f"{api_endpoint.rstrip('/')}/aaa/sim/model/load"
-    sim_req = SimRequest(model_id=model_id, Step_mode=True)
+    sim_req = SimModelLoadRequest(model_id=model_id, Step_mode=True)
     try:
-        response = requests.post(url, json=sim_req.model_dump())
+        response = requests.post(url, json=sim_req.model_dump(mode="json"))
         response.raise_for_status()
         result = response.json()
-        print(result)
-        print(result["sim_id"], result["status"])
+        print(f"sim id: {result['sim_id']}, status: {result['sim_status']}")
     except requests.exceptions.RequestException as e:
         print(f"❌ Error calling API: {e}")
         if e.response is not None:
             print("Response:", e.response.text)
         sys.exit(1)
+
+def run_sim(api_endpoint: str, sim_id: str, step_mode: bool):
+    url = f"{api_endpoint.rstrip('/')}/aaa/sim/run"
+    try:
+        sim_request = SimRequest(sim_id=sim_id, step_mode=step_mode, timestamp=datetime.now(timezone.utc) )
+        resp = requests.post(url, json=sim_request.model_dump(mode="json"))  # returns a dict
+        resp.raise_for_status()
+        resp_json = resp.json()
+        sim_response = SimResponse(**resp_json)
+        print(sim_response.model_dump_json(indent=2))
+    except requests.RequestException as e:
+        print(f"[ERROR] Failed to step sim: {e}")
+
 
 
 def main():
@@ -128,9 +144,14 @@ def main():
     delete = subparsers.add_parser("delete-model", help="Delete an existing model")
     delete.add_argument("--model-id", required=True, help="ID of the model to delete")
 
-        # load-model subcommand
+    # load-model subcommand
     load_parser = subparsers.add_parser("load-model", help="Load a simulation model into the environment")
     load_parser.add_argument("--model-id", required=True, help="Model ID to load")
+
+    # Add set-sim command
+    step_parser = subparsers.add_parser("run-model", help="Run/Step through a simulation by sim_id")
+    step_parser.add_argument("--sim-id", required=True, help="Simulation ID to run/step")
+    step_parser.add_argument("--step-mode", action="store_true", help="Step through the model one step at a time")
 
 
     args = parser.parse_args()
@@ -145,6 +166,8 @@ def main():
         delete_model(args.api_endpoint, args.model_id)
     elif args.command == "load-model":
         load_model(api_endpoint=args.api_endpoint, model_id=args.model_id)
+    elif args.command == "run-model":
+        run_sim(api_endpoint=args.api_endpoint,sim_id=args.sim_id, step_mode=args.step_mode)
     else:
         parser.print_help()
 

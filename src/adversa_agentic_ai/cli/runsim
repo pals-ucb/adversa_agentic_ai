@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Usage: ./runsim <model-id>
+API_ENDPOINT="http://127.0.0.1:8080"
+MODEL_ID="$1"
+
+if [ -z "$MODEL_ID" ]; then
+  echo "Usage: $0 <model-id>"
+  exit 1
+fi
+
+# Step 1: Call CLI to load model
+LOAD_OUTPUT=$(./adversa --api-endpoint "$API_ENDPOINT" load-model --model-id "$MODEL_ID")
+
+# Extract sim_id from output (assuming format: "sim id: <uuid>, status: Loaded")
+SIM_ID=$(echo "$LOAD_OUTPUT" | grep -oP '(?<=sim id: )[^,]+')
+
+if [ -z "$SIM_ID" ]; then
+  echo "[ERROR] Failed to extract sim_id from CLI output:"
+  echo "$LOAD_OUTPUT"
+  exit 1
+fi
+
+# Step 2: Call CLI to run model
+./adversa --api-endpoint "$API_ENDPOINT" run-model --sim-id "$SIM_ID" --step-mode
+

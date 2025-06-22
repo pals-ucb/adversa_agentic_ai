@@ -1,10 +1,6 @@
-
+import copy
 import agentic_cbsim.cyberbattle.simulation.model as m
 from agentic_cbsim.cyberbattle._env.cyberbattle_env import CyberBattleEnv
-from agentic_cbsim.cyberbattle.simulation.model import (
-    CustomerData, LateralMove, PrivilegeEscalation, AdminEscalation, SystemEscalation,
-    ProbeSucceeded, ProbeFailed, ExploitFailed, LeakedCredentials, LeakedNodesId,
-    CachedCredential, PrivilegeLevel)
 from adversa_agentic_ai.api.schemas.sim_models import SimModel, Node, Vulnerability, OutcomeType
 from adversa_agentic_ai.models.model_interface import ModelInterface
 from adversa_agentic_ai.utils.config_logger import get_agent_logger
@@ -15,11 +11,11 @@ logger = get_agent_logger()
 class ConvertedSimModel(ModelInterface):
     def __init__(self, model: SimModel):
         self.name = model.name
-        self.services = []
-        self.vulnerabilities = {}
-        self.nodes = {}
+        self.a3_services = []
+        self.a3_nodes = {}
+        self.a3_vulnerabilities = {}
         logger.info(f"Converting Adversa model to CBSim Model: {model.name}")
-        self.default_firewall = m.FirewallConfiguration(
+        self.a3_default_firewall = m.FirewallConfiguration(
             incoming=[
                 m.FirewallRule("HTTPS", m.RulePermission.ALLOW),
                 m.FirewallRule("SSH", m.RulePermission.ALLOW)
@@ -28,98 +24,114 @@ class ConvertedSimModel(ModelInterface):
                 m.FirewallRule("HTTPS", m.RulePermission.ALLOW)
             ]
         )
-
-        # Step 1: Convert vulnerabilities
-        self._vuln_library = {}
-        for node in model.nodes:
-            for vuln in node.vulnerabilities:
-                if not vuln.outcome_type:
-                    raise ValueError(f"Missing outcome_type for vulnerability {vuln.id}")
-                if not vuln.outcome_params:
-                    raise ValueError(f"Missing outcome_params for vulnerability {vuln.id}")
-                cbsim_vuln = self._convert_vuln(vuln)
-                self._vuln_library[vuln.id] = cbsim_vuln
-                self.vulnerabilities[vuln.id] = cbsim_vuln
-
-        # Step 2: Convert nodes
-        for node in model.nodes:
-            self.nodes[node.id] = self._convert_node(node)
-
-        # Step 3: Build environment
-        identifiers = m.infer_constants_from_nodes(self.nodes.items(), self._vuln_library)
-        self.network = m.create_network(self.nodes)
-
-        # Step 4: Build topology from children
-        for parent in model.nodes:
-            for child_id in parent.children:
-                self.network.add_edge(parent.id, child_id)
-
-        self.env = m.Environment(
-            network=self.network,
-            vulnerability_library=self._vuln_library,
-            identifiers=identifiers
+        # Deep copy to modify inline
+        self.a3_model = copy.deepcopy(model)
+        a3_vuln_library = {}  # Will be filled during inference
+        for a3_node in self.a3_model.nodes:
+            for a3_vuln in a3_node.vulnerabilities:
+                try:
+                    outcome = self._create_vulnerability_outcome(a3_vuln.outcome_type, **(a3_vuln.outcome_params or {}))
+                except Exception as e:
+                    logger.error(f"Invalid outcome_params for {a3_vuln.id} in node {a3_node.id}: {e}")
+                    outcome = m.ExploitFailed()
+                a3_vuln.outcome = outcome  # Inject resolved outcome
+        for a3_node in self.a3_model.nodes:
+            logger.debug(f"Converting node: {a3_node.id}")
+            node_info = self._convert_node(a3_node, a3_vuln_library)
+            self.a3_nodes[a3_node.id] = node_info
+        self.a3_network = m.create_network(self.a3_nodes)
+        for a3_node in self.a3_model.nodes:
+            for child_id in a3_node.children:
+                self.a3_network.add_edge(a3_node.id, child_id)
+        self.a3_identifiers = m.infer_constants_from_nodes(self.a3_nodes.items(), a3_vuln_library)
+        self.a3_env = m.Environment(
+            network=self.a3_network,
+            vulnerability_library=a3_vuln_library,
+            identifiers=self.a3_identifiers
         )
-        logger.info(f"Conversion to CBSim Model succeeded: {model.name}")
+        # Validation: Check all LeakedCredentials have credentials
+        for vuln_id, vuln in self.a3_vulnerabilities.items():
+            if isinstance(vuln.outcome, m.LeakedCredentials):
+                if not vuln.outcome.credentials:
+                    logger.error(f"LeakedCredentials for vuln {vuln_id} has empty credentials list!")
+        self.print_model_info()
+        logger.info(f"CBSim Model initialized : {model.name}")
 
-    def create_vulnerability_outcome(self, outcome_type: OutcomeType, **kwargs) -> m.VulnerabilityOutcome:
+    def _create_vulnerability_outcome(self, outcome_type: OutcomeType, **kwargs) -> m.VulnerabilityOutcome:
+        logger.debug(f"Converting outcome type: {outcome_type}")
         match outcome_type:
             case OutcomeType.CustomerData:
-                return CustomerData()
-
+                return m.CustomerData()
             case OutcomeType.LateralMove:
-                # Expected: success: bool
-                return LateralMove(success=kwargs.get("success", True))
-
+                return m.LateralMove(success=kwargs.get("success", True))
             case OutcomeType.PrivilegeEscalation:
-                # Expected: level: PrivilegeLevel
-                return PrivilegeEscalation(level=kwargs["level"])
-
+                return m.PrivilegeEscalation(level=kwargs["level"])
             case OutcomeType.AdminEscalation:
-                return AdminEscalation()
-
+                return m.AdminEscalation()
             case OutcomeType.SystemEscalation:
-                return SystemEscalation()
-
+                return m.SystemEscalation()
             case OutcomeType.ProbeSucceeded:
-                # Expected: discovered_properties: List[str]
-                return ProbeSucceeded(discovered_properties=kwargs["discovered_properties"])
-
+                return m.ProbeSucceeded(discovered_properties=kwargs["discovered_properties"])
             case OutcomeType.ProbeFailed:
-                return ProbeFailed()
-
+                return m.ProbeFailed()
             case OutcomeType.ExploitFailed:
-                return ExploitFailed()
-
+                return m.ExploitFailed()
             case OutcomeType.LeakedCredentials:
-                # Expected: credentials: List[CachedCredential]
-                return LeakedCredentials(credentials=kwargs["credentials"])
-
+                raw_credentials = kwargs.get("credentials", [])
+                if not raw_credentials:
+                    logger.warning("LeakedCredentials has no credentials defined — this will cause CBSim to fail.")
+                    raise ValueError("LeakedCredentials outcome must have non-empty 'credentials'")
+                credentials = [
+                    m.CachedCredential(
+                        node=cred["node"],
+                        port=cred["port"],
+                        credential=cred["credential"]
+                    ) for cred in raw_credentials
+                ]
+                return m.LeakedCredentials(credentials=credentials)
             case OutcomeType.LeakedNodesId:
-                # Expected: nodes: List[str]
-                return LeakedNodesId(nodes=kwargs["nodes"])
-
+                return m.LeakedNodesId(nodes=kwargs["nodes"])
             case _:
                 raise ValueError(f"Unsupported OutcomeType: {outcome_type}")
 
-    def _convert_vuln(self, vuln: Vulnerability) -> m.VulnerabilityInfo:
-        try:
-            outcome = self.create_vulnerability_outcome(vuln.outcome_type, vuln.outcome_params)
-        except Exception as e:
-            logger.error(f"Invalid outcome_params for {vuln.id}: {e}")
-            outcome = ExploitFailed()
+    def _infer_cbsim_vuln_type(self, vuln_type: str, vuln_subtype: str) -> m.VulnerabilityType:
+        remote_like = {
+            "RemoteCodeExecution", "Eavesdropping", "Misconfiguration", "DenialOfService"
+        }
+        local_like = {
+            "PrivilegeEscalation", "CredentialLeak", "SocialEngineering", "PhysicalAttack"
+        }
+        if vuln_subtype in remote_like:
+            return m.VulnerabilityType.REMOTE
+        elif vuln_subtype in local_like:
+            return m.VulnerabilityType.LOCAL
+        type_based_map = {
+            "network": m.VulnerabilityType.REMOTE,
+            "software": m.VulnerabilityType.REMOTE,
+            "social": m.VulnerabilityType.LOCAL,
+            "physical": m.VulnerabilityType.LOCAL
+        }
+        return type_based_map.get(vuln_type.lower(), m.VulnerabilityType.REMOTE)
 
-        return m.VulnerabilityInfo(
-            description=vuln.description,
-            type=m.VulnerabilityType.REMOTE,
-            outcome=outcome,
-            reward_string=vuln.description,
-            cost=vuln.cost
-        )
-
-    def _convert_node(self, node: Node) -> m.NodeInfo:
+    def _convert_node(self, node: Node, a3_vuln_library: Dict[str, m.VulnerabilityInfo]) -> m.NodeInfo:
         services = [m.ListeningService(self._map_service_to_port(s.name)) for s in node.services]
-        firewall = self.default_firewall if node.firewalls else m.FirewallConfiguration([], [])
-        vuln_map = {v.id: self._vuln_library[v.id] for v in node.vulnerabilities}
+        firewall = self.a3_default_firewall if node.firewalls else m.FirewallConfiguration([], [])
+        vuln_map = {}
+        for v in node.vulnerabilities:
+            if not v.outcome:
+                raise ValueError(f"Missing outcome in vulnerability {v.id} of node {node.id}")
+            cbsim_vuln = m.VulnerabilityInfo(
+                description=v.description,
+                type=self._infer_cbsim_vuln_type(v.type, v.subtype),
+                outcome=v.outcome,
+                reward_string=v.description,
+                cost=v.cost
+            )
+            unique_id = f"{node.id}:{v.id}"
+            vuln_map[unique_id] = cbsim_vuln
+            self.a3_vulnerabilities[unique_id] = cbsim_vuln
+            a3_vuln_library[unique_id] = cbsim_vuln
+
         props = [f"{p.key}:{p.version or p.value}" for p in node.properties]
 
         return m.NodeInfo(
@@ -142,34 +154,54 @@ class ConvertedSimModel(ModelInterface):
         }
         return mapping.get(service.lower(), service.upper())
 
-    def _resolve_outcome_class(self, outcome_type: str):
-        mapping = {
-            "PrivilegeEscalation": m.PrivilegeEscalation,
-            "LeakedCredentials": m.LeakedCredentials,
-            "LeakedNodesId": m.LeakedNodesId,
-            "CustomerData": m.CustomerData,
-            "LateralMove": m.LateralMove,
-            "ProbeSucceeded": m.ProbeSucceeded,
-            "ProbeFailed": m.ProbeFailed,
-            "ExploitFailed": m.ExploitFailed,
-        }
-        if outcome_type not in mapping:
-            raise ValueError(f"Unsupported outcome_type: {outcome_type}")
-        return mapping[outcome_type]
+    def print_model_info(self):
+        print("\n=== [ConvertedSimModel] Internal State ===")
+        print(f"Model name: {self.name}")
+        print(f"Total services: {len(self.a3_services)}")
+        print(f"Total nodes: {len(self.a3_nodes)}")
+        print(f"Total vulnerabilities: {len(self.a3_vulnerabilities)}")
+        print(f"Identifiers: {self.a3_identifiers}")
+        print("\n-- Nodes --")
+        for node_id, node in self.a3_nodes.items():
+            print(f"Node ID: {node_id}")
+            print(f"  Properties: {node.properties}")
+            print(f"  Services: {[s.name for s in node.services]}")
+            print(f"  Vulnerabilities: {list(node.vulnerabilities.keys())}")
 
-    # -- ModelInterface required methods --
+        print("\n-- Vulnerabilities --")
+        for vid, vuln in self.a3_vulnerabilities.items():
+            print(f"Vulnerability ID: {vid}")
+            print(f"  Desc: {vuln.description}")
+            print(f"  Type: {vuln.type}")
+            print(f"  Outcome: {type(vuln.outcome).__name__}")
+            if isinstance(vuln.outcome, m.LeakedCredentials):
+                for cred in vuln.outcome.credentials:
+                    print(f"    -> Credential: node={cred.node}, port={cred.port}, value={cred.credential}")
+
+        print("\n=== [CBSim Environment View] ===")
+        print(f"  Network nodes: {list(self.a3_env.network.nodes)}")
+        print(f"  Vulnerability library size: {len(self.a3_env.vulnerability_library)}")
+
+        leaked_creds_found = []
+        for v in self.a3_env.vulnerability_library.values():
+            if isinstance(v.outcome, m.LeakedCredentials):
+                leaked_creds_found.append(v.outcome.credentials)
+                print(f"[CBSim] LeakedCredentials found: {[(c.node, c.port, c.credential) for c in v.outcome.credentials]}")
+
+        print(f"\nTotal LeakedCredentials entries in CBSim: {len(leaked_creds_found)}")
+
+    # ModelInterface methods
     def get_env(self):
-        return self.env
+        return self.a3_env
 
     def get_model(self):
         return self
 
     def get_services(self):
-        return self.services
+        return self.a3_services
 
     def get_vulnerabilities(self):
-        return list(self.vulnerabilities.values())
+        return list(self.a3_vulnerabilities.values())
 
     def get_nodeinfo(self):
-        return self.nodes
-
+        return self.a3_nodes

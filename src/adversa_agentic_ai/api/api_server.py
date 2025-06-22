@@ -11,10 +11,14 @@ set_current_agent(app_name)
 setup_logger(app_name)
 logger = get_agent_logger()
 
-from fastapi import FastAPI,Request
-from fastapi.responses import HTMLResponse
-from fastapi.middleware.cors import CORSMiddleware
 import time
+from fastapi import FastAPI,Request
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi import Request
+
+
 
 # Routers
 
@@ -71,6 +75,14 @@ async def log_requests(request: Request, call_next):
     logger.info(f"<-- {request.method} {request.url.path} {response.status_code} [{process_time:.2f}ms]")
 
     return response
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    print(await request.body())  # Logs raw body for debugging
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": exc.body},
+    )
 
 
 # === Register All Routers with Prefixes ===

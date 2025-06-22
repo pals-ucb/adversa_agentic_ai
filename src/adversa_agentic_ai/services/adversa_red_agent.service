@@ -1,0 +1,18 @@
+[Unit]
+Description=Adversa Orchestrator Service
+After=network.target
+
+[Service]
+Type=simple
+User=pals
+WorkingDirectory=/home/pals/Workspace/adversa_agentic_ai
+EnvironmentFile=/home/pals/Workspace/adversa_agentic_ai/.adversa_runtime_env
+ExecStart=/home/pals/miniconda3/envs/cbsim/bin/python src/adversa_agentic_ai/agents/a3/a3_agent_main.py --agent_name red_agent
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

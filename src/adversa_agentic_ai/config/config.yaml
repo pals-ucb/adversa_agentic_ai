@@ -57,6 +57,13 @@ agents:
     max_tokens: 1024
   - name: a3_orchestrator
     model_id: cohere.command-r-plus-v1:0 
+    managed_agents:
+      - id: "red"
+        role: "Red"
+        url: "http://localhost:8001"
+      - id: "blue"
+        role: "Teacher"
+        url: "http://localhost:8000"
     port: 8002
     host: 0.0.0.0
     provider: aws

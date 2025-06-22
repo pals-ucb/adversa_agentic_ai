@@ -6,14 +6,15 @@ from typing import Any, Dict
 class AnthropicClaudeAdapter(BaseModelAdapter):
     def __init__(self, model_id: str):
         pass
+
     def format_prompt(self, prompt: str, **kwargs) -> Dict[str, Any]:
+        prompt = f"Human: {prompt}\n\n Assistant: "
         return {
             "prompt": prompt,
             "max_tokens_to_sample": kwargs.get("max_tokens", 512),
             "temperature": kwargs.get("temperature", 0.7),
             "top_p": kwargs.get("top_p", 0.9),
-            "stop_sequences": kwargs.get("stop_sequences", ["\n\nHuman:"]),
-            "anthropic_version": kwargs.get("anthropic_version", "bedrock-2023-06-01")
+            "stop_sequences": kwargs.get("stop_sequences", ["\n\nHuman:"])
         }
 
     def extract_text(self, response_body: Dict[str, Any]) -> str:

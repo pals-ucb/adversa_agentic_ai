@@ -31,17 +31,21 @@ class VulnerabilitySubtype(str, Enum):  # 1:1 mapping with CBSim types
     Misconfiguration = "Misconfiguration"
     PhysicalAttack = "PhysicalAttack"
 
+class NodeType(str, Enum):  # 1:1 mapping with CBSim types
+    Asset = "Asset"
+    Person = "Person"
+
 class OutcomeType(str, Enum):
-    CustomerData = "CustomerData" 
-    LateralMove = "LateralMove" 
-    Privilege = "Privilege" 
-    Admin = "Admin"
-    System = "System"
-    ProbeSucceeded = "ProbeSucceeded" 
-    ProbeFailed = "ProbeFailed" 
-    ExploitFailed = "ExploitFailed" 
-    LeakedCredentials = "LeakedCredentials" 
-    LeakedNodes = "LeakedNodes"
+    CustomerData = "CustomerData"  # Info leakage: SSN, DOB, etc.
+    LateralMove = "LateralMove"    # Move to another node
+    PrivilegeEscalation = "PrivilegeEscalation"  # Gain higher privilege (requires 'level')
+    AdminEscalation = "AdminEscalation"          # Escalate to admin
+    SystemEscalation = "SystemEscalation"        # Escalate to system/root
+    ProbeSucceeded = "ProbeSucceeded"            # Successful reconnaissance (returns properties)
+    ProbeFailed = "ProbeFailed"                  # Reconnaissance failed
+    ExploitFailed = "ExploitFailed"              # Exploit did not work
+    LeakedCredentials = "LeakedCredentials"      # Got credentials (username:pw)
+    LeakedNodesId = "LeakedNodesId"              # Learned other node IDs
 
 class Vulnerability(BaseModel):
     id: str = Field(..., description="Unique identifier for this vulnerability")
@@ -88,6 +92,7 @@ class NodeResource(BaseModel):
 class Node(BaseModel):
     id: str = Field(..., description="Unique identifier for the node")
     name: str = Field(..., description="Descriptive name for the node")
+    node_type: NodeType = Field(..., description="The name of the node like Person/Asset etc.")
     properties: List[NodeProperty] = Field(default_factory=list, description="Static attributes or configuration details")
     services: List[NodeService] = Field(default_factory=list, description="Running services offered by the node")
     resources: List[NodeResource] = Field(default_factory=list, description="Resources hosted or attached to this node")
@@ -95,7 +100,8 @@ class Node(BaseModel):
     children: List[str] = Field(default_factory=list, description="Child node IDs (e.g., VMs inside host, microservices)")
     vulnerabilities: List[Vulnerability] = Field(default_factory=list, description="Vulnerabilities associated with this node")
     firewalls: List[Firewall] = Field(default_factory=list, description="Firewalls or protections deployed on this node")
-    value: Optional[float] = Field(default=1.0, description="Reward value if this node is successfully compromised")
+    importance_score: float = Field(None, description="A number that specifies the relative importance of the node(unscaled)")
+    reward_score: Optional[float] = Field(None, description="Normalized reward score calculaed based on importance score.")
     credentials: Optional[List[str]] = Field(default_factory=list, description="List of credentials that work on this node")
 
 class SimModel(BaseModel):

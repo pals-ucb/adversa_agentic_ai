@@ -35,7 +35,7 @@ class BedrockLLMClient:
         self.model_id = None
         self.default_adapter: BaseModelAdapter = None
 
-    def connect(self, model_id: str):
+    def connect(self, model_id: str, ping_model):
         self.model_id = model_id
         provider_key = self._extract_provider_key(model_id)
         adapter_factory = MODEL_ADAPTER_REGISTRY.get(provider_key)
@@ -45,8 +45,11 @@ class BedrockLLMClient:
         logger.info(f"Bedrock client ready for model_id: {model_id} using adapter: {self.default_adapter.__class__.__name__}")
         try:
             # Simple test prompt
-            ping = self.invoke(model_id, "Hello, 1+1=?")
-            logger.info(f"Ping response from {model_id}: {ping!r}")
+            if ping_model:
+                ping = self.invoke(model_id, "Hello, 1+1=?")
+                logger.info(f"Ping response from {model_id}: {ping!r}")
+            else:
+                logger.error(f"model ping disabled.")
         except Exception as e:
             logger.exception("Ping failed.")
             raise RuntimeError("Bedrock ping test failed") from e

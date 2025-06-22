@@ -13,16 +13,5 @@ class LoadModelRequest(BaseModel):
 class LoadModelResponse(BaseModel):
     sim_id: str = Field(..., description="Unique ID for the simulation instance")
     model_id: str = Field(..., description="The model ID used to create the simulation")
-    status: SimStatus = Field(..., description="Status of the simulation loading")
-
-class ExecuteRequest(BaseModel):
-    sim_id: str = Field(..., description="Unique ID for the simulation instance")
-    model_id: str = Field(..., description="The model ID used to create the simulation")
-    mode: Literal["run", "step"]
-    input: Optional[dict] = None
-
-class ExecuteResponse(BaseModel):
-    model_id: str
-    sim_id: str = Field(..., description="Unique ID for the simulation instance")
-    status: SimStatus = Field(..., description="Status of the simulation loading")
-    result: dict
+    sim_status: SimStatus = Field(..., description="Status of the simulation loading")
+    message: Optional[str] = Field(None, description="Model load failure/error status message")
