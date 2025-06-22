@@ -2,6 +2,7 @@
 import re
 from shlex import join
 from typing import Any, Dict, List, Optional
+from fastapi.background import P
 from pydantic import BaseModel
 import json
 from abc import ABC, abstractmethod
@@ -49,7 +50,8 @@ class LLMBaseAgent(AgentInterface, ABC):
                  model_id: str, 
                  provider: str,
                  platform: str,
-                 max_tokens: int = 512):
+                 max_tokens: int = 512,
+                 ping_model: bool = False):
         self.model_id = model_id
         self.history: List[PromptHistoryEntry] = []
         self.connected = False
@@ -60,10 +62,10 @@ class LLMBaseAgent(AgentInterface, ABC):
         self.vector_memory: Optional[VectorStoreRetriever] = None
         self.tools: List[Tool] = []
         self.max_tokens = max_tokens
-        self.connect()
+        self.connect(ping_model=ping_model)
 
-    def connect(self):
-        self.llm_client.connect(model_id=self.model_id)
+    def connect(self, ping_model):
+        self.llm_client.connect(model_id=self.model_id, ping_model=ping_model)
         self.connected = True
         self.logger.info(f"LLMBaseAgent connected to LLM provider: {self.model_id}")
 

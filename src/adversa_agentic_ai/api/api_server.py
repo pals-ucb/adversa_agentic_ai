@@ -11,18 +11,23 @@ set_current_agent(app_name)
 setup_logger(app_name)
 logger = get_agent_logger()
 
-from fastapi import FastAPI,Request
-from fastapi.responses import HTMLResponse
-from fastapi.middleware.cors import CORSMiddleware
 import time
+from fastapi import FastAPI,Request
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi import Request
+
+
 
 # Routers
-from .routers.agents import router as agents_router
-from .routers.providers import router as providers_router
-from .routers.prompt_templates import router as prompt_templates_router
-from .routers.sim_models import router as sim_models_router
-from .routers.sim import router as sim_runtime_router
-from .config_api import router as config_router
+
+from adversa_agentic_ai.api.routers.agents import router as agents_router
+from adversa_agentic_ai.api.routers.providers import router as providers_router
+from adversa_agentic_ai.api.routers.prompt_templates import router as prompt_templates_router
+from adversa_agentic_ai.api.routers.sim_models import router as sim_models_router
+from adversa_agentic_ai.api.routers.sim import router as sim_runtime_router
+from adversa_agentic_ai.api.config_api import router as config_router
 
 stage = os.getenv("STAGE", "Prod")           # or hard-code "Prod"
 app = FastAPI(
@@ -31,7 +36,7 @@ app = FastAPI(
     openapi_url="/openapi.json",              # still the same path, but prefixed
     docs_url="/docs",
     redoc_url="/redoc",
-    version="0.1.0",
+    version="0.2.0",
     description="""
 API for managing simulation models (`SimModel`), PromptTemplates, Agents(Red/Blue), Providers and LLM Selections.
 The API also allows running Simulations using the /aaa/sim APIs.
@@ -70,6 +75,14 @@ async def log_requests(request: Request, call_next):
     logger.info(f"<-- {request.method} {request.url.path} {response.status_code} [{process_time:.2f}ms]")
 
     return response
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    print(await request.body())  # Logs raw body for debugging
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": exc.body},
+    )
 
 
 # === Register All Routers with Prefixes ===

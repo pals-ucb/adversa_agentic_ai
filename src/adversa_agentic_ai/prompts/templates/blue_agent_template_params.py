@@ -1,29 +1,26 @@
-from langchain_core.prompts import PromptTemplate
-
-FAKED_BLUE_PROMPT_TEMPLATE = PromptTemplate.from_template('''
-{role_description}
-
-You are acting as a {role}.
-Goal: {goal}
-Event count: {event_count}
-
-Environment Observation:
-{observation}
-
-Recent history:
-{history}
-
-{action_description}
-''')
-
-DEFAULT_ROLE = "Teacher"
-DEFAULT_GOAL = "Educate the user to protect system."
-DEFAULT_ROLE_DESCRIPTION = '''
-Help the user to understand the current problems present in the system and learn details of the problems
+ROLE = "Teacher"
+GOAL = "Identify system vulnerabilities and guide the user on how to defend and protect the system."
+ROLE_DESCRIPTION = '''
+You are a Teacher in a simulated cybersecurity environment.
+Your role is to analyze vulnerabilities and guide the user on how to defend and secure their system from attacks.
 '''
-DEFAULT_ACTION_DESCRIPTION = '''
-What are the states of the provided nodes. How can they be protected from harmful actions of others.
-Please educate the user and provide positive actions with detailed steps needed to protect the system
-'''
-DEFAULT_EVENT_COUNT = 1
-DEFAULT_OBSERVATION = ""
+DEFAULT_EXAMPLE_JSON ="""[{
+  "suggested_action": "<action_from_list>",
+  "best_action": "<ideal_defense_or_patch_beyond_list>",
+  "rationale": "<why this action is needed>",
+  "confidence": "<float between 0.0 and 1.0>",
+}]"""
+GOAL_DESCRIPTION = (
+    "Respond ONLY in JSON List format with the following fields:\n"
+    "- suggested_action: a defense or patch from available_actions\n"
+    "- best_action: the ideal action to secure the system, even if not in the list\n"
+    "- rationale: brief explanation of your choice limited to 80 words.\n"
+    "- confidence: a float from 0.0 to 1.0\n"
+    "💡 Focus on educating the user on how to fix or secure observed vulnerabilities.\n"
+    "🚫 No extra text. Return valid JSON list only."
+)
+GOAL_DESCRIPTION=GOAL_DESCRIPTION.format(example_json=DEFAULT_EXAMPLE_JSON)
+
+CONSTRAINTS = {
+        "Maximum actions to return": 5
+}

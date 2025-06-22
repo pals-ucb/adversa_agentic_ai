@@ -15,7 +15,7 @@ class AgentInterface(Runnable):
     """
 
     @abstractmethod
-    def connect(self) -> None:
+    def connect(self, ping_model) -> None:
         """Establish a connection to the LLM or necessary backend services."""
         pass
 

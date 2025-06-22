@@ -1,0 +1,477 @@
+{
+  "id": "55d0c048-245c-43f2-95d3-c688164fcd72",
+  "name": "Emergency Room SimModel V4",
+  "description": "A model simulating an ER with phishing and misconfiguration vulnerabilities.",
+  "nodes": [
+    {
+      "id": "Patient",
+      "name": "Patient",
+      "importance_score": 90,
+      "reward_score": 0,
+      "node_type": "Person",
+      "properties": [
+        {
+          "key": "role",
+          "value": "Patient"
+        },
+        {
+          "key": "data_exposure_risk",
+          "value": "High"
+        },
+        {
+          "key": "privacy_concerns",
+          "value": "Sensitive health info at risk"
+        }
+      ],
+      "services": [],
+      "children": [
+        "CheckInStation"
+      ],
+      "vulnerabilities": [
+        {
+          "id": "phishing_risk_patient",
+          "type": "social",
+          "subtype": "SocialEngineering",
+          "description": "The patient might be targeted by phishing emails or messages pretending to be from the hospital.",
+          "vclass": "exposed",
+          "outcome": "LeakedCredentials",
+          "outcome_type": "LeakedCredentials",
+          "outcome_params": {
+            "credential_id": "patient_email_login"
+          }
+        },
+        {
+          "id": "oversharing_risk",
+          "type": "social",
+          "subtype": "SocialEngineering",
+          "description": "The patient might accidentally reveal sensitive health or personal information to unauthorized parties.",
+          "vclass": "exposed",
+          "outcome": "LeakedNodesId",
+          "outcome_type": "LeakedNodesId",
+          "outcome_params": {
+            "leaked_nodes": ["CheckInStation"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "Nurse",
+      "name": "Nurse",
+      "node_type": "Person",
+      "importance_score": 60,
+      "reward_score": 0,
+      "properties": [
+        {
+          "key": "role",
+          "value": "Nurse"
+        },
+        {
+          "key": "access_level",
+          "value": "Moderate"
+        },
+        {
+          "key": "llm_assist_use",
+          "value": "Moderate"
+        }
+      ],
+      "services": [],
+      "children": [
+        "TriageStation"
+      ],
+      "vulnerabilities": [
+        {
+          "id": "pretexting_threat",
+          "type": "social",
+          "subtype": "SocialEngineering",
+          "description": "Attackers may impersonate hospital staff to gain unauthorized access via the nurse.",
+          "vclass": "exposed",
+          "outcome": "LeakedNodesId",
+          "outcome_type": "LeakedNodesId",
+          "outcome_params": {
+            "leaked_nodes": ["TriageStation"]
+          }
+        },
+        {
+          "id": "excessive_access",
+          "type": "software",
+          "subtype": "PrivilegeEscalation",
+          "description": "The nurse may have unnecessary elevated access rights to patient records.",
+          "vclass": "configured",
+          "outcome": "LeakedCredentials",
+          "outcome_type": "LeakedCredentials",
+          "outcome_params": {
+            "credential_id": "ehr_root_access"
+          }
+        }
+      ]
+    },
+    {
+      "id": "Doctor",
+      "name": "Doctor",
+      "node_type": "Person",
+      "importance_score": 80,
+      "reward_score": 0,
+      "properties": [
+        {
+          "key": "role",
+          "value": "Doctor"
+        },
+        {
+          "key": "access_level",
+          "value": "Privileged"
+        },
+        {
+          "key": "notes_usage",
+          "value": "High volume"
+        }
+      ],
+      "services": [],
+      "children": [
+        "Pharmacy",
+        "ERBilling",
+        "Laboratory"
+      ],
+      "vulnerabilities": [
+        {
+          "id": "pretexting_threat",
+          "type": "social",
+          "subtype": "SocialEngineering",
+          "description": "Attackers may impersonate hospital staff to gain unauthorized access via the nurse.",
+          "vclass": "exposed",
+          "outcome": "LeakedNodesId",
+          "outcome_type": "LeakedNodesId",
+          "outcome_params": {
+            "credential_id": "patient_email_login"
+          }
+        },
+        {
+          "id": "excessive_access",
+          "type": "software",
+          "subtype": "PrivilegeEscalation",
+          "description": "The nurse may have unnecessary elevated access rights to patient records.",
+          "vclass": "configured",
+          "outcome": "LeakedCredentials",
+          "outcome_type": "LeakedCredentials",
+          "outcome_params": {
+            "credential_id": "patient_email_login"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CheckInStation",
+      "name": "CheckInStation",
+      "node_type": "Asset",
+      "importance_score": 50,
+      "reward_score": 0,
+      "properties": [
+        {
+          "key": "role",
+          "value": "Patient Registration"
+        },
+        {
+          "key": "software_stack",
+          "value": "Windows 10, CheckInSoft v2.3"
+        },
+        {
+          "key": "hardware_interface",
+          "value": "ID Scanner - Model X120"
+        },
+        {
+          "key": "HIPAA_164_308",
+          "value": "Risk management policy not enforced for outdated scanner software"
+        },
+        {
+          "key": "HIPAA_164_312",
+          "value": "Access control relies on weak login password"
+        }
+      ],
+      "services": [
+        {
+          "name": "http",
+          "port": 80,
+          "version": "Apache 2.4.29"
+        },
+        {
+          "name": "ssh",
+          "port": 22,
+          "version": "OpenSSH 7.2p2"
+        }
+      ],
+      "children": [
+        "TriageStation"
+      ],
+      "vulnerabilities": [
+        {
+          "id": "misconfig",
+          "type": "network",
+          "subtype": "Misconfiguration",
+          "vclass": "configured",
+          "description": "Public API exposed sensitive data",
+          "outcome_type": "ProbeSucceeded",
+          "outcome_params": {
+            "discovered_properties": [
+              "ssn",
+              "dob",
+              "name"
+            ]
+          },
+          "cost": 2.0,
+          "granted_access": "user",
+          "prereq": []
+        }
+      ]
+    },
+    {
+      "id": "TriageStation",
+      "name": "TriageStation",
+      "node_type": "Asset",
+      "importance_score": 55,
+      "reward_score": 0,
+      "properties": [
+        {
+          "key": "role",
+          "value": "Initial Assessment"
+        },
+        {
+          "key": "uses_llm",
+          "value": "ScribeLLM Enabled"
+        },
+        {
+          "key": "HIPAA_164_308",
+          "value": "ScribeLLM logs are not regularly audited"
+        },
+        {
+          "key": "HIPAA_164_312",
+          "value": "Transcript data not encrypted at rest"
+        }
+      ],
+      "services": [
+        {
+          "name": "https",
+          "port": 443,
+          "version": "nginx 1.18.0"
+        },
+        {
+          "name": "api",
+          "port": 8080,
+          "version": "ScribeAPI v1.5"
+        }
+      ],
+      "children": [
+        "Doctor",
+        "Laboratory"
+      ],
+      "vulnerabilities": [
+        {
+          "id": "misconfig",
+          "type": "network",
+          "subtype": "Misconfiguration",
+          "vclass": "configured",
+          "description": "Public API exposed sensitive data",
+          "outcome_type": "ProbeSucceeded",
+          "outcome_params": {
+            "discovered_properties": [
+              "ssn",
+              "dob",
+              "name"
+            ]
+          },
+          "cost": 2.0,
+          "granted_access": "user",
+          "prereq": []
+        }
+      ]
+    },
+    {
+      "id": "Laboratory",
+      "name": "Laboratory",
+      "node_type": "Asset",
+      "importance_score": 65,
+      "reward_score": 0,
+      "properties": [
+        {
+          "key": "role",
+          "value": "Diagnostics"
+        },
+        {
+          "key": "equipment_interface",
+          "value": "BloodAnalyzer v5.2"
+        },
+        {
+          "key": "HIPAA_164_308",
+          "value": "Insufficient logging of test result access"
+        },
+        {
+          "key": "HIPAA_164_312",
+          "value": "Unencrypted test result transmission"
+        }
+      ],
+      "services": [
+        {
+          "name": "ftp",
+          "port": 21,
+          "version": "vsFTPd 3.0.3"
+        },
+        {
+          "name": "http",
+          "port": 80,
+          "version": "Lighttpd 1.4.45"
+        }
+      ],
+      "children": [],
+      "vulnerabilities": [
+        {
+          "id": "misconfig",
+          "type": "network",
+          "subtype": "Misconfiguration",
+          "vclass": "configured",
+          "description": "Public API exposed sensitive data",
+          "outcome_type": "ProbeSucceeded",
+          "outcome_params": {
+            "discovered_properties": [
+              "ssn",
+              "dob",
+              "name"
+            ]
+          },
+          "cost": 2.0,
+          "granted_access": "user",
+          "prereq": []
+        }
+      ]
+    },
+    {
+      "id": "Pharmacy",
+      "name": "Pharmacy",
+      "node_type": "Asset",
+      "importance_score": 50,
+      "reward_score": 0,
+      "properties": [
+        {
+          "key": "role",
+          "value": "Medication Dispensing Unit"
+        },
+        {
+          "key": "inventory_system",
+          "value": "Enabled"
+        },
+        {
+          "key": "prescription_entry",
+          "value": "Electronic"
+        },
+        {
+          "key": "access_control",
+          "value": "PharmacistOnly"
+        },
+        {
+          "key": "insurance_integration",
+          "value": "Active"
+        },
+        {
+          "key": "HIPAA_164_308",
+          "value": "No periodic review of pharmacist access logs"
+        },
+        {
+          "key": "HIPAA_164_312",
+          "value": "Prescriptions printed without obfuscation"
+        }
+      ],
+      "services": [
+        {
+          "name": "https",
+          "port": 443,
+          "version": "PharmaWeb 3.1"
+        },
+        {
+          "name": "db",
+          "port": 5432,
+          "version": "PostgreSQL 12.4"
+        }
+      ],
+      "children": [],
+      "vulnerabilities": [
+        {
+          "id": "misconfig",
+          "type": "network",
+          "subtype": "Misconfiguration",
+          "vclass": "configured",
+          "description": "Public API exposed sensitive data",
+          "outcome_type": "ProbeSucceeded",
+          "outcome_params": {
+            "discovered_properties": [
+              "ssn",
+              "dob",
+              "name"
+            ]
+          },
+          "cost": 2.0,
+          "granted_access": "user",
+          "prereq": []
+        }
+      ]
+    },
+    {
+      "id": "ERBilling",
+      "name": "ERBilling",
+      "node_type": "Asset",
+      "importance_score": 75,
+      "reward_score": 0,
+      "properties": [
+        {
+          "key": "role",
+          "value": "Medical Billing Unit"
+        },
+        {
+          "key": "billing_software",
+          "value": "MedBillPro v4.1"
+        },
+        {
+          "key": "customer_data_handling",
+          "value": "PII stored in plaintext"
+        },
+        {
+          "key": "HIPAA_164_308",
+          "value": "Audit trails not regularly reviewed"
+        },
+        {
+          "key": "HIPAA_164_312",
+          "value": "No encryption for stored billing records"
+        }
+      ],
+      "services": [
+        {
+          "name": "http",
+          "port": 80,
+          "version": "Apache 2.4.41"
+        },
+        {
+          "name": "mysql",
+          "port": 3306,
+          "version": "MySQL 5.7"
+        }
+      ],
+      "children": [],
+      "vulnerabilities": [
+        {
+          "id": "misconfig",
+          "type": "network",
+          "subtype": "Misconfiguration",
+          "vclass": "configured",
+          "description": "Public API exposed sensitive data",
+          "outcome_type": "ProbeSucceeded",
+          "outcome_params": {
+            "discovered_properties": [
+              "ssn",
+              "dob",
+              "name"
+            ]
+          },
+          "cost": 2.0,
+          "granted_access": "user",
+          "prereq": []
+        }
+      ]
+    }
+  ]
+}

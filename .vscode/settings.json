@@ -1,7 +1,7 @@
 {
     "python.analysis.extraPaths": [
         "./src/adversa_agentic_ai",
-        "./modules/agentic_cbsim"
+        "./src/agentic_cbsim",
     ],
     "python.envFile": "${workspaceFolder}/.env",
     "python.defaultInterpreterPath": "/home/pals/miniconda3/envs/cbsim/bin/python",

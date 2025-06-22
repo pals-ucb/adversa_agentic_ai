@@ -1,0 +1,8 @@
+# Runtime environment variables for Adversa Agentic AI services
+# Logging level (DEBUG, INFO, WARNING, ERROR)
+LOG_LEVEL=INFO
+# AWS Profile to use (if applicable; leave blank or unset if using EC2 IAM role)
+AWS_PROFILE=pals
+# Environment type: dev / staging / prod
+APP_ENV=dev
+PYTHONPATH=src/agentic_cbsim

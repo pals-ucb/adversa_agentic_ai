@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, status
 from typing import List
 from adversa_agentic_ai.utils.config_logger import get_agent_logger
+from adversa_agentic_ai.api.schemas.schema_validator import validate_sim_model
 from ..schemas.sim_models import SimModel
 from ..stores.sim_model_store import SimModelStore
 from botocore.exceptions import ClientError
@@ -22,9 +23,26 @@ sim_model_db = SimModelStore()
     description="Creates and stores a new SimModel with associated nodes, vulnerabilities, firewalls, and resources."
 )
 def create_sim_model(model: SimModel, background_tasks: BackgroundTasks):
+    def normalize_node_rewards(nodes: list) -> None:
+        total_importance = sum(node.importance_score for node in nodes if hasattr(node, 'importance_score'))
+        if total_importance == 0:
+            raise ValueError("Total importance score is zero. Cannot normalize.")
+        for node in nodes:
+            if hasattr(node, 'importance_score'):
+                normalized = (node.importance_score / total_importance) * 100
+                node.reward_score = round(normalized, 2)  # Round for readability
+            else:
+                node.reward_score = 0.0  # Or raise an error if you want strict validation
+
     logger.info(f'SimModel: create {model}')
     if sim_model_db.get(model.id):
         raise HTTPException(status_code=400, detail="Model already exists")
+    try:
+        # Validate before saving
+        validate_sim_model(model)  # throws if invalid
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=f"Model validation failed: {e}")
+    normalize_node_rewards(model.nodes)
     return sim_model_db.save(model, background_tasks)
 
 @router.get(

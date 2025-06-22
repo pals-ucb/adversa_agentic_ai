@@ -9,7 +9,6 @@ _agent_name = None
 def set_current_agent(name: str):
     global _agent_name
     _agent_name = name
-    print(f"Setting agent name: {_agent_name}")
 
 def setup_logger(app_name: str, level: int = logging.INFO) -> logging.Logger:
     """
@@ -17,7 +16,6 @@ def setup_logger(app_name: str, level: int = logging.INFO) -> logging.Logger:
     and set both the logger and its handlers to `level` or above.
     """
     # 1) get or create the logger
-    print(f"Setting up logger name: Global {_agent_name} passed: {app_name}")
     logger = logging.getLogger(app_name)
     logger.setLevel(level)
     logger.propagate = False   # avoid double‐logging if root also has handlers
@@ -52,7 +50,6 @@ def setup_logger(app_name: str, level: int = logging.INFO) -> logging.Logger:
 
 def get_agent_logger():
     import traceback
-    print(f"Using agent name : {_agent_name}")
     if not _agent_name:
         traceback.print_stack() 
     return logging.getLogger(_agent_name if _agent_name else "default")

@@ -1,8 +1,11 @@
 # File: src/api/routers/sim_models.py
 from fastapi import APIRouter
-from pydantic import BaseModel, Field
-from typing import List, Optional
+from pydantic import BaseModel, Field, field_validator
+from typing import Dict, List, Optional, Any, Annotated
 from enum import Enum
+from uuid import UUID, uuid4
+
+
 
 router = APIRouter()
 
@@ -18,12 +21,50 @@ class VulnerabilityType(str, Enum):
     social = "social"                  # Human or phishing-based entry points
     physical = "physical"              # Physical access threats
 
+class VulnerabilitySubtype(str, Enum):  # 1:1 mapping with CBSim types
+    RemoteCodeExecution = "RemoteCodeExecution"
+    PrivilegeEscalation = "PrivilegeEscalation"
+    CredentialLeak = "CredentialLeak"
+    Eavesdropping = "Eavesdropping"
+    DenialOfService = "DenialOfService"
+    SocialEngineering = "SocialEngineering"
+    Misconfiguration = "Misconfiguration"
+    PhysicalAttack = "PhysicalAttack"
+
+class NodeType(str, Enum):  # 1:1 mapping with CBSim types
+    Asset = "Asset"
+    Person = "Person"
+
+class OutcomeType(str, Enum):
+    CustomerData = "CustomerData"  # Info leakage: SSN, DOB, etc.
+    LateralMove = "LateralMove"    # Move to another node
+    PrivilegeEscalation = "PrivilegeEscalation"  # Gain higher privilege (requires 'level')
+    AdminEscalation = "AdminEscalation"          # Escalate to admin
+    SystemEscalation = "SystemEscalation"        # Escalate to system/root
+    ProbeSucceeded = "ProbeSucceeded"            # Successful reconnaissance (returns properties)
+    ProbeFailed = "ProbeFailed"                  # Reconnaissance failed
+    ExploitFailed = "ExploitFailed"              # Exploit did not work
+    LeakedCredentials = "LeakedCredentials"      # Got credentials (username:pw)
+    LeakedNodesId = "LeakedNodesId"              # Learned other node IDs
+
 class Vulnerability(BaseModel):
     id: str = Field(..., description="Unique identifier for this vulnerability")
     type: VulnerabilityType = Field(..., description="Type of vulnerability as described in enum above.")
+    subtype: VulnerabilitySubtype = Field(..., description="Detailed type (CBSim compatible)")
     description: str = Field(..., description="Detailed explanation of the vulnerability")
     vclass: VulnerabilityClass = Field(..., description="Vulnerability classification level identify if this vulnerability was discovered by the LLM.")
-    outcome: str = Field(..., description="Expected effect if exploited (e.g., access granted, DoS)")
+    outcome: Optional[Any] = Field(
+        None, 
+        description="Runtime outcome of the vulnerability. Optional in authoring mode; constructed from outcome_type and outcome_params."
+    )
+    cost: float = Field(default=1.0, description="Cost to exploit this vulnerability")
+    granted_access: str = Field(default="user", description="Access level granted upon successful exploitation")
+    prereq: Optional[List[str]] = Field(default_factory=list, description="Credentials required before exploitation")
+    outcome_type: OutcomeType = Field(..., description="The type of effect this vulnerability has when exploited, mapped to CBSim outcome classes")
+    outcome_params: Optional[Dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Parameter dictionary to instantiate the corresponding outcome object (e.g., {'level': 'admin'} for PrivilegeEscalation)"
+    )
 
 class FirewallType(str, Enum):
     linux_fw = "classic linux firewall"        # iptables, nftables, etc.
@@ -51,6 +92,7 @@ class NodeResource(BaseModel):
 class Node(BaseModel):
     id: str = Field(..., description="Unique identifier for the node")
     name: str = Field(..., description="Descriptive name for the node")
+    node_type: NodeType = Field(..., description="The name of the node like Person/Asset etc.")
     properties: List[NodeProperty] = Field(default_factory=list, description="Static attributes or configuration details")
     services: List[NodeService] = Field(default_factory=list, description="Running services offered by the node")
     resources: List[NodeResource] = Field(default_factory=list, description="Resources hosted or attached to this node")
@@ -58,9 +100,18 @@ class Node(BaseModel):
     children: List[str] = Field(default_factory=list, description="Child node IDs (e.g., VMs inside host, microservices)")
     vulnerabilities: List[Vulnerability] = Field(default_factory=list, description="Vulnerabilities associated with this node")
     firewalls: List[Firewall] = Field(default_factory=list, description="Firewalls or protections deployed on this node")
+    importance_score: float = Field(None, description="A number that specifies the relative importance of the node(unscaled)")
+    reward_score: Optional[float] = Field(None, description="Normalized reward score calculaed based on importance score.")
+    credentials: Optional[List[str]] = Field(default_factory=list, description="List of credentials that work on this node")
 
 class SimModel(BaseModel):
-    id: str = Field(..., description="Unique simulation model ID")
+    id: Optional[UUID] = Field(default_factory=uuid4, description="UUIDv4 ID, optional — generated if not provided")
     name: str = Field(..., description="Human-readable name for the simulation model")
     description: Optional[str] = Field(None, description="Optional high-level description of the simulation environment")
     nodes: List[Node] = Field(..., description="List of all nodes that compose the simulation environment")
+
+    @field_validator("id")
+    def validate_uuid4(cls, v):
+        if v and v.version != 4:
+            raise ValueError("Only UUID version 4 is allowed")
+        return v

@@ -1,0 +1,283 @@
+{
+  "id": "3d0bca84-a418-47bf-9900-d55110941978",
+  "name": "Emergency Room SimModel V3",
+  "description": "A model simulating an ER with phishing and misconfiguration vulnerabilities.",
+  "nodes": [
+    {
+      "id": "Patient",
+      "name": "Patient",
+      "properties": [],
+      "services": [],
+      "children": [
+        "CheckInStation"
+      ],
+      "vulnerabilities": [
+        {
+          "id": "phishing",
+          "type": "social",
+          "subtype": "SocialEngineering",
+          "vclass": "configured",
+          "description": "Phishing link clicked",
+          "outcome_type": "LeakedCredentials",
+          "outcome_params": {
+            "credentials": [
+              {
+                "node": "CheckInStation",
+                "port": "HTTPS",
+                "credential": "ubuntu:ubuntu123$"
+              }
+            ]
+          },
+          "cost": 1.0,
+          "granted_access": "user",
+          "prereq": []
+        }
+      ],
+      "node_type": "Person"
+    },
+    {
+      "id": "Nurse",
+      "name": "Nurse",
+      "properties": [],
+      "services": [],
+      "children": [
+        "TriageStation"
+      ],
+      "vulnerabilities": [
+        {
+          "id": "phishing",
+          "type": "social",
+          "subtype": "SocialEngineering",
+          "vclass": "configured",
+          "description": "Phishing link clicked",
+          "outcome_type": "LeakedCredentials",
+          "outcome_params": {
+            "credentials": [
+              {
+                "node": "CheckInStation",
+                "port": "HTTPS",
+                "credential": "admin:healthcare123"
+              }
+            ]
+          },
+          "cost": 1.0,
+          "granted_access": "user",
+          "prereq": []
+        }
+      ],
+      "node_type": "Person"
+    },
+    {
+      "id": "Doctor",
+      "name": "Doctor",
+      "properties": [],
+      "services": [],
+      "children": [
+        "Pharmacy",
+        "ERBilling",
+        "Laboratory"
+      ],
+      "vulnerabilities": [
+        {
+          "id": "phishing",
+          "type": "social",
+          "subtype": "SocialEngineering",
+          "vclass": "configured",
+          "description": "Phishing link clicked",
+          "outcome_type": "LeakedCredentials",
+          "outcome_params": {
+            "credentials": [
+              {
+                "node": "CheckInStation",
+                "port": "HTTPS",
+                "credential": "doctor:password123"
+              }
+            ]
+          },
+          "cost": 1.0,
+          "granted_access": "user",
+          "prereq": []
+        }
+      ],
+      "node_type": "Person"
+    },
+    {
+      "id": "CheckInStation",
+      "name": "CheckInStation",
+      "properties": [],
+      "services": [
+        {
+          "name": "HTTPS",
+          "description": null
+        }
+      ],
+      "children": [
+        "TriageStation"
+      ],
+      "vulnerabilities": [
+        {
+          "id": "misconfig",
+          "type": "network",
+          "subtype": "Misconfiguration",
+          "vclass": "configured",
+          "description": "Public API exposed sensitive data",
+          "outcome_type": "ProbeSucceeded",
+          "outcome_params": {
+            "discovered_properties": [
+              "ssn",
+              "dob",
+              "name"
+            ]
+          },
+          "cost": 2.0,
+          "granted_access": "user",
+          "prereq": []
+        }
+      ],
+      "node_type": "Asset"
+    },
+    {
+      "id": "TriageStation",
+      "name": "TriageStation",
+      "properties": [],
+      "services": [
+        {
+          "name": "HTTPS",
+          "description": null
+        }
+      ],
+      "children": [
+        "Doctor",
+        "Laboratory"
+      ],
+      "vulnerabilities": [
+        {
+          "id": "misconfig",
+          "type": "network",
+          "subtype": "Misconfiguration",
+          "vclass": "configured",
+          "description": "Public API exposed sensitive data",
+          "outcome_type": "ProbeSucceeded",
+          "outcome_params": {
+            "discovered_properties": [
+              "ssn",
+              "dob",
+              "name"
+            ]
+          },
+          "cost": 2.0,
+          "granted_access": "user",
+          "prereq": []
+        }
+      ],
+      "node_type": "Asset"
+    },
+    {
+      "id": "Laboratory",
+      "name": "Laboratory",
+      "properties": [],
+      "services": [
+        {
+          "name": "HTTPS",
+          "description": null
+        },
+        {
+          "name": "SQL",
+          "description": null
+        }
+      ],
+      "children": [],
+      "vulnerabilities": [
+        {
+          "id": "misconfig",
+          "type": "network",
+          "subtype": "Misconfiguration",
+          "vclass": "configured",
+          "description": "Public API exposed sensitive data",
+          "outcome_type": "ProbeSucceeded",
+          "outcome_params": {
+            "discovered_properties": [
+              "ssn",
+              "dob",
+              "name"
+            ]
+          },
+          "cost": 2.0,
+          "granted_access": "user",
+          "prereq": []
+        }
+      ],
+      "node_type": "Asset"
+    },
+    {
+      "id": "Pharmacy",
+      "name": "Pharmacy",
+      "properties": [],
+      "services": [
+        {
+          "name": "HTTPS",
+          "description": null
+        }
+      ],
+      "children": [],
+      "vulnerabilities": [
+        {
+          "id": "misconfig",
+          "type": "network",
+          "subtype": "Misconfiguration",
+          "vclass": "configured",
+          "description": "Public API exposed sensitive data",
+          "outcome_type": "ProbeSucceeded",
+          "outcome_params": {
+            "discovered_properties": [
+              "ssn",
+              "dob",
+              "name"
+            ]
+          },
+          "cost": 2.0,
+          "granted_access": "user",
+          "prereq": []
+        }
+      ],
+      "node_type": "Asset"
+    },
+    {
+      "id": "ERBilling",
+      "name": "ERBilling",
+      "properties": [],
+      "services": [
+        {
+          "name": "HTTPS",
+          "description": null
+        },
+        {
+          "name": "SQL",
+          "description": null
+        }
+      ],
+      "children": [],
+      "vulnerabilities": [
+        {
+          "id": "misconfig",
+          "type": "network",
+          "subtype": "Misconfiguration",
+          "vclass": "configured",
+          "description": "Public API exposed sensitive data",
+          "outcome_type": "ProbeSucceeded",
+          "outcome_params": {
+            "discovered_properties": [
+              "ssn",
+              "dob",
+              "name"
+            ]
+          },
+          "cost": 2.0,
+          "granted_access": "user",
+          "prereq": []
+        }
+      ],
+      "node_type": "Asset"
+    }
+  ]
+}
