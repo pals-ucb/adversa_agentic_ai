@@ -46,6 +46,13 @@ Built on CyberBattleSim and enhanced with LLM-based agents and domain knowledge,
 
 ## Architecture
 
+<p align="center">
+  <img src="./src/adversa_agentic_ai/docs/A3_Architecture.png" alt="Adversarial Agentic AI" width="500"/>
+  <br/>
+  <em>Figure 1: Adversarial Agentic AI</em>
+</p>
+
+
 ```
 +--------------------------------------------+
 |       Agentic AI Simulation Platform       |
